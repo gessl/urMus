@@ -25,6 +25,7 @@ double norm2PositiveLinear(double norm);
 double norm2ModIndex(double norm);
 double norm2PitchShift(double norm);
 double norm2Rate(double norm);
+double capNorm(double norm);
 
 void urs_PullActiveDacSinks(SInt16 *buff, UInt32 len);
 void urs_PullActiveAudioFrameSinks();

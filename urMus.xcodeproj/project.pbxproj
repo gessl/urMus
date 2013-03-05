@@ -3050,7 +3050,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
-				CODE_SIGN_IDENTITY = "iPhone Developer: Georg Essl (Q4K2DQJWQ3)";
+				CODE_SIGN_IDENTITY = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -3074,7 +3074,7 @@
 					"-fobjc-arc",
 				);
 				PRODUCT_NAME = urMus;
-				PROVISIONING_PROFILE = "F073BF3A-84B0-4B13-9FCF-F20561F53D55";
+				PROVISIONING_PROFILE = "97AD0390-29CF-4C17-BE1F-096EF7A38A7A";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -3087,7 +3087,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
-				CODE_SIGN_IDENTITY = "iPhone Developer: Georg Essl (Q4K2DQJWQ3)";
+				CODE_SIGN_IDENTITY = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -3109,7 +3109,7 @@
 					"-fobjc-arc",
 				);
 				PRODUCT_NAME = urMus;
-				PROVISIONING_PROFILE = "F073BF3A-84B0-4B13-9FCF-F20561F53D55";
+				PROVISIONING_PROFILE = "97AD0390-29CF-4C17-BE1F-096EF7A38A7A";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";

@@ -19,9 +19,9 @@ ADSR :: ADSR( void )
 {
   target_ = 0.0;
   value_ = 0.0;
-  attackRate_ = 0.001;
-  decayRate_ = 0.001;
-  releaseRate_ = 0.005;
+  attackRate_ = 0.00001;
+  decayRate_ = 0.00001;
+  releaseRate_ = 0.00005;
   sustainLevel_ = 0.5;
   state_ = ATTACK;
   Stk::addSampleRateAlert( this );
