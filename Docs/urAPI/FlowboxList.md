@@ -20,7 +20,7 @@ rate = 33.3Hz
 - Y (1): Y-Axis acceleration (-1,1)
 - Z (2): Z-Axis acceleration (-1,1)
 
-Camera
+Cam
 --------
 ### Description
 Provides hardware specific camera-derived data. This flowbox is self-timed and provides a stable rate. It cannot be instanced. It is subject to other camera settings.
@@ -72,7 +72,7 @@ rate = 48000Hz
 ### Output
 - Out (0): Microphone data (-1,1)
 
-Net
+NetIn
 -----
 ### Description
 Provides network data. This flowbox is self-timed but does not provide a stable rate. It must be instanced.
@@ -147,10 +147,10 @@ Manipulators are flowboxes which have both at least one input and one output. Th
 SinOsc
 --------
 ### Description
-Generates a sine wave. It is not self-timed and derives its time update from being pulled at the output WaveForm. It provides not couples.
+Generates a sine wave. It is not self-timed and derives its time update from being pulled at the output Out. It provides not couples.
 
 ### Source of Rate
-Pulling output WaveForm (0)
+Pulling output Out (0)
 
 ### Couples
 None
@@ -162,7 +162,7 @@ None
 - Time (3): Time(-1,1)
 
 ### Output
-- WaveForm (0): (-1,1)
+- Out (0): (-1,1)
 
 Avg
 -----
@@ -177,7 +177,7 @@ In (0) <-> Out (0)
 
 ### Inputs
 - In (0): (-1,1)
-- Avg (1): (-1,1) -> (1,511), default = 256
+- Len (1): (-1,1) -> (1,511), default = 256
 
 Dist3
 --------
@@ -195,6 +195,24 @@ None
 - In2 (1): (-1,1)
 - In3 (2): (-1,1)
 - Train (3): (-1,1)
+
+### Output
+- Out (0): (-1,1)
+
+Add
+-----
+### Description
+Provides the sum of two inputs at the output. It is not self-timed and has no couples.
+
+### Source of Rate
+Pulling output Out (0)
+
+### Couples
+None
+
+### Inputs
+- In1 (0): (-1,1)
+- In2 (1): (-1,1)
 
 ### Output
 - Out (0): (-1,1)
@@ -593,7 +611,7 @@ Any change at input In (0) or output Out (0)
 
 ### Inputs
 - In (0): (-1,1)
-- Gain (1): (-1,1)
+- Amp (1): (-1,1)
 
 ### Output
 - Out (0): (-1,1)
@@ -645,10 +663,10 @@ None
 CMap
 ------
 ### Description
-Generates a circle map wave. A circle map is a non-linear oscillator. If the non-linearity is -1 it will behave like a linear sine oscillator. It is not self-timed and derives its time update from being pulled at the output WaveForm. It provides not couples.
+Generates a circle map wave. A circle map is a non-linear oscillator. If the non-linearity is -1 it will behave like a linear sine oscillator. It is not self-timed and derives its time update from being pulled at the output Out. It provides not couples.
 
 ### Source of Rate
-Pulling output WaveForm (0)
+Pulling output Out (0)
 
 ### Couples
 None
@@ -661,7 +679,7 @@ None
 - Time (4): Time(-1,1)
 
 ### Output
-- WaveForm (0): (-1,1)
+- Out (0): (-1,1)
 
 
 Plucked
@@ -676,7 +694,7 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
+- Trigger (0): (-1,1) -> nonzero value for amplitude
 - Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
 
 ### Output
@@ -688,17 +706,17 @@ ADSR
 This is the STK ADSR envelope algorithm.
 
 ### Source of Rate
-Any change at input In (0) or output Out (0)
+Pulling output Out (0)
 
 ### Couples
-- In (0) <-> Out (0)
+None
 
 ### Inputs
-- In (0): (-1,1)
-- Attack (1): (-1,1)
-- Decay (2): (-1,1)
-- Sustain (3): (-1,1)
-- Release (4): (-1,1)
+- Trigger (0): (-1,1) -> positive value for ATTACK, nonpositive for RELEASE
+- Attack (1): (-1,1) -> attack rate
+- Decay (2): (-1,1) -> decay rate
+- Sustain (3): (-1,1) -> sustain level
+- Release (4): (-1,1) -> release rate
 
 ### Output
 - Out (0): (-1,1)
@@ -716,7 +734,7 @@ Any change at input In (0) or output Out (0)
 
 ### Inputs
 - In (0): (-1,1)
-- Tau (1): Rate (-1,0,1) -> (-4,0,4) with 0.25->1 being standard rate
+- Tau (1): Rate (-1,1) -> (0,1) 
 
 ### Output
 - Out (0): (-1,1)
@@ -754,10 +772,9 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
-- Phase (2): (-1,1)
-- Harms (3): (-1,1)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- Phase (1): (-1,1)
+- Harms (2): (-1,1)
 
 ### Output
 - Out (0): (-1,1)
@@ -774,9 +791,8 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
-- Harms (2): (-1,1)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- Harms (1): (-1,1)
 
 ### Output
 - Out (0): (-1,1)
@@ -793,10 +809,9 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
-- Phase (2): (-1,1)
-- Harms (3): (-1,1)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- Phase (1): (-1,1)
+- Harms (2): (-1,1)
 
 ### Output
 - Out (0): (-1,1)
@@ -813,8 +828,9 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- Amp (1): Amplitude (0,1)
+- Rate (2) : Rate (-1,1) -> (sample, 4sec)
 
 ### Output
 - Out (0): (-1,1)
@@ -831,8 +847,11 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- ToneHole (1) : Tonehole state (-1,1) -> (closed, fully open)
+- Vent (2) : Vent state (-1,1) -> (closed, fully open)
+- Amp (3): Amplitude (0,1)
+- Rate (4) : Rate (-1,1) -> (sample, 4sec)
 
 ### Output
 - Out (0): (-1,1)
@@ -849,9 +868,9 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
-- Vibrato (2): (-1,1)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- Vibrato (1): Vibrato Gain (-1,1) 
+- Amp (2): Amplitude (0,1) 
 
 ### Output
 - Out (0): (-1,1)
@@ -887,8 +906,8 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- Amp (1): Amplitude (0,1) 
 
 ### Output
 - Out (0): (-1,1)
@@ -905,8 +924,9 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- Amp (1): Amplitude (0,1) 
+- Rate (2) : Rate (-1,1) -> (sample, 4sec)
 
 ### Output
 - Out (0): (-1,1)
@@ -924,7 +944,7 @@ Any change at input In (0) or output Out (0)
 
 ### Inputs
 - In (0): (-1,1)
-- Delay (1): (-1,1)
+- Delay (1): (-1,1) -> (0, 1sec)
 
 ### Output
 - Out (0): (-1,1)
@@ -942,7 +962,7 @@ Any change at input In (0) or output Out (0)
 
 ### Inputs
 - In (0): (-1,1)
-- Delay (1): (-1,1)
+- Delay (1): (-1,1) -> (0, 1sec)
 
 ### Output
 - Out (0): (-1,1)
@@ -996,8 +1016,8 @@ Any change at input In (0) or output Out (0)
 - In (0) <-> Out (0)
 
 ### Inputs
-- In (0): (-1,1)
-- Time (1): (-1,1)
+- Target (0): (-1,1)
+- Rate (1) : Rate (-1,1) -> (sample, 4sec)
 
 ### Output
 - Out (0): (-1,1)
@@ -1014,11 +1034,13 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
-- JetRefl (2): (-1,1)
-- EndRefl (3): (-1,1)
-- JetDelay (4): (-1,1)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- JetRefl (1): (-1,1)
+- EndRefl (2): (-1,1)
+- JetDelay (3): (-1,1)
+- Amp (4): Amplitude (0,1)
+- Rate (5) : Rate (-1,1) -> (sample, 4sec)
+
 
 ### Output
 - Out (0): (-1,1)
@@ -1070,32 +1092,13 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- VibRate (1): (-1,1)
-- VibGain (2): (-1,1)
-- RandGain (3): (-1,1)
+- VibFreq (0): Vibrato Frequency (-1,0,1) -> log(.,55,24000)
+- VibGain (1): Vibrato Gain(0,1)
+- RandGain (2): Random Gain(0,1)
 
 ### Output
 - Out (0): (-1,1)
 
-NRev
-------
-#Description
-This is the STK NRev reverb algorithm.
-
-### Source of Rate
-Any change at input In (0) or output Out (0)
-
-### Couples
-- In (0) <-> Out (0)
-
-### Inputs
-- In (0): (-1,1)
-- T60 (1): (-1,1)
-
-### Output
-- Out (0): (-1,1)
-	
 OnePole
 ---------
 #Description
@@ -1110,7 +1113,6 @@ Any change at input In (0) or output Out (0)
 ### Inputs
 - In (0): (-1,1)
 - Reson (1): Frequency (-1,0,1) -> log(.,55,24000)
-- Q (2): (-1,1)
 
 ### Output
 - Out (0): (-1,1)
@@ -1129,7 +1131,6 @@ Any change at input In (0) or output Out (0)
 ### Inputs
 - In (0): (-1,1)
 - Notch (1): Frequency (-1,0,1) -> log(.,55,24000)
-- B1 (2): (-1,1)
 
 ### Output
 - Out (0): (-1,1)
@@ -1147,7 +1148,7 @@ Any change at input In (0) or output Out (0)
 
 ### Inputs
 - In (0): (-1,1)
-- Shift (1): (-1,1)
+- Shift (1): (-1,0,1) -> (0,1,4)
 
 ### Output
 - Out (0): (-1,1)
@@ -1236,8 +1237,11 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
-- Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
+- Freq (0): Frequency (-1,0,1) -> log(.,55,24000)
+- Pos (1): blowing position (-1,1) -> (0,1)
+- Amp (2): Amplitude (0,1)
+- Rate (3) : Rate (-1,1) -> (sample, 4sec)
+ 
 
 ### Output
 - Out (0): (-1,1)
@@ -1254,7 +1258,7 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
+- Trigger (0): (-1,1) -> nonzero value for amplitude
 - Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
 
 ### Output
@@ -1272,7 +1276,7 @@ Pulling output Out (0)
 None
 
 ### Inputs
-- In (0): (-1,1)
+- Trigger (0): (-1,1) -> nonzero value for amplitude
 - Freq (1): Frequency (-1,0,1) -> log(.,55,24000)
 - Stretch (2): (-1,1)
 - Pos (3): (-1,1)
@@ -1319,4 +1323,15 @@ rate = variable, depending on computational and graphics load, target is 60Hz
 
 ### Input
 - In (0): Pulled visual data (-1,1)
+
+Pull
+-----
+### Description
+Provides data pulled by an urMus lua program. This flowbox is self-timed but does not provide a stable rate. It must be instanced. Calling its :Pull(data) method will increase time and send data to its output.
+
+### Typical native rate
+rate = variable, depending on the pattern Pull:Pull() is called
+
+### Input
+- In (0): Programmatic pushed data (-1,1)
 	

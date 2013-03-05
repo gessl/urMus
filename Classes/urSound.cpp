@@ -1220,7 +1220,7 @@ double Gain_Tick(ursObject* gself)
 {
 	Gain_Data* self = (Gain_Data*)gself->objectdata;
 	double res;
-	res = gself->lastindata[0];
+	res = 0; //gself->lastindata[0];
 	
 	res += gself->CallAllPullIns();
 	res = res * self->amp;

@@ -99,7 +99,7 @@ void ADSR_In(ursObject* gself, double indata)
 	gself->CallAllPushOuts(res);
 }
 */
-void ADSR_In(ursObject* gself, double indata)
+void ADSR_Trigger(ursObject* gself, double indata)
 {
 	ADSR* self = (ADSR*)gself->objectdata;
     if (indata > 0) // ATTACK
@@ -586,10 +586,10 @@ void BlowBotl_SetAmplitude(ursObject* gself, double indata)
 {
 	ExBlowBotl* self = (ExBlowBotl*)gself->objectdata;
     self->amplitude = indata;
-    if (self->amplitude> 0)
-        self->startBlowing(self->amplitude,self->rate);
-    else
+    if (self->amplitude== 0)
         self->stopBlowing(self->rate);
+    else
+        self->startBlowing(self->amplitude,self->rate);
 }
 
 void BlowBotl_SetRate(ursObject* gself, double indata)
@@ -2167,14 +2167,11 @@ double Plucked_Out(ursObject* gself)
 	return self->lastOut();
 }
 
-void Plucked_In(ursObject* gself, double indata)
+void Plucked_Trigger(ursObject* gself, double indata)
 {
 	Plucked* self = (Plucked*)gself->objectdata;
-	gself->lastindata[0] =indata;
-	self->pluck(indata);
-	double res = 0;
-	res = self->tick();
-	gself->CallAllPushOuts(res);
+    if (indata != 0)
+        self->pluck(fabs(indata));
 }
 
 void Plucked_SetFrequency(ursObject* gself, double indata)
@@ -2577,7 +2574,7 @@ double Sitar_Out(ursObject* gself)
 	Sitar* self = (Sitar*)gself->objectdata;
 	return self->lastOut();
 }
-
+/*
 void Sitar_In(ursObject* gself, double indata)
 {
 	Sitar* self = (Sitar*)gself->objectdata;
@@ -2586,6 +2583,13 @@ void Sitar_In(ursObject* gself, double indata)
 	double res = 0;
 	res = self->tick();
 	gself->CallAllPushOuts(res);
+}
+*/
+void Sitar_Trigger(ursObject* gself, double indata)
+{
+	Sitar* self = (Sitar*)gself->objectdata;
+    if (indata != 0)
+        self->pluck(fabs(indata));
 }
 
 void Sitar_SetFrequency(ursObject* gself, double indata)
@@ -2624,14 +2628,11 @@ double StifKarp_Out(ursObject* gself)
 	return self->lastOut();
 }
 
-void StifKarp_In(ursObject* gself, double indata)
+void StifKarp_Trigger(ursObject* gself, double indata)
 {
 	StifKarp* self = (StifKarp*)gself->objectdata;
-	gself->lastindata[0] =indata;
-	self->pluck(indata);
-	double res = 0;
-	res = self->tick();
-	gself->CallAllPushOuts(res);
+    if (indata != 0)
+        self->pluck(fabs(indata));
 }
 
 void StifKarp_SetFrequency(ursObject* gself, double indata)
@@ -2878,7 +2879,7 @@ void urSTK_Setup()
 
 	object = new ursObject("Plucked", Plucked_Constructor, Plucked_Destructor,2,1);
 	object->AddOut("Out", "TimeSeries", Plucked_Tick, Plucked_Out, NULL);
-	object->AddIn("Trigger", "Trigger", Plucked_In);
+	object->AddIn("Trigger", "Trigger", Plucked_Trigger);
 	object->AddIn("Freq", "Frequency", Plucked_SetFrequency);
     addSTKNote(object);
 	urmanipulatorobjectlist.Append(object);
@@ -2886,7 +2887,7 @@ void urSTK_Setup()
 	object = new ursObject("ADSR", ADSR_Constructor, ADSR_Destructor,5,1);
 	object->AddOut("Out", "TimeSeries", ADSR_Tick, ADSR_Out, NULL);
 
-	object->AddIn("Trigger", "Trigger", ADSR_In);
+	object->AddIn("Trigger", "Trigger", ADSR_Trigger);
 	object->AddIn("Attack", "Rate", ADSR_SetAttack);
 	object->AddIn("Decay", "Rate", ADSR_SetDecay);
 	object->AddIn("Sustain", "Threshold", ADSR_SetSustain);
@@ -3297,14 +3298,14 @@ void urSTK_Setup()
 	
 	object = new ursObject("Sitar", Sitar_Constructor, Sitar_Destructor,2,1);
 	object->AddOut("Out", "TimeSeries", Sitar_Tick, Sitar_Out, NULL);
-	object->AddIn("Trigger", "Trigger", Sitar_In);
+	object->AddIn("Trigger", "Trigger", Sitar_Trigger);
 	object->AddIn("Freq", "Frequency", Sitar_SetFrequency);
     addSTKNote(object);
 	urmanipulatorobjectlist.Append(object);
 	
 	object = new ursObject("StifKarp", StifKarp_Constructor, StifKarp_Destructor,5,1);
 	object->AddOut("Out", "TimeSeries", StifKarp_Tick, StifKarp_Out, NULL);
-	object->AddIn("Trigger", "Trigger", StifKarp_In);
+	object->AddIn("Trigger", "Trigger", StifKarp_Trigger);
 	object->AddIn("Freq", "Frequency", StifKarp_SetFrequency);
 	object->AddIn("Stretch", "Generic", StifKarp_SetStretch);
 	object->AddIn("Pos", "Position", StifKarp_SetPickupPosition);

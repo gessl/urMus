@@ -45,7 +45,7 @@ double norm2ModIndex(double norm)
 	return (norm+1.0)*6.0;
 }
 
-// This is a normed value to pitchshift. Allowing a range of 0-2. We offset by 1.0 to make 0 be neutral (no pitch change). Quadratic relationship.
+// This is a normed value to pitchshift. Allowing a range of 0-4. We offset by 1.0 to make 0 be neutral (no pitch change). Quadratic relationship.
 double norm2PitchShift(double norm)
 {
 	return (norm+1.0)*(norm+1.0);
