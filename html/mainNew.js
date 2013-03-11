@@ -98,6 +98,7 @@ $(document).ready(function () {
                   tabLabels.push(label);
                   addEditor();
                   tabs.tabs('select', tabIndexMap.length - 1);
+                  
                   cm[cm.length - 1].refresh();
                   cm[cm.length - 1].focus();
                   
@@ -146,7 +147,47 @@ $(document).ready(function () {
                                                            autofocus: true,
                                                            tabMode: "indent",
                                                            matchBrackets: true,
-                                                           mode: "lua"
+                                                           mode: "lua",
+                                                           extraKeys: {
+                                                           "Cmd-R": function(instance) {                                                     selected = tabIndexMap[tabs.tabs('option', 'selected')]; // => 0
+                                                           opened_file = tabLabels[selected];
+                                                           $.ajax({
+                                                                  type: 'POST',
+                                                                  url: '/eval',
+                                                                  data: {
+                                                                  code: cm[selected].getSelection()
+                                                                  },
+                                                                  success: function () {
+                                                                  msg('success', "Ran " + opened_file);
+                                                                  },
+                                                                  error: function (xhr, opts) {
+                                                                  msg('error', xhr.responseText);
+                                                                  }
+                                                                  });
+                                                           
+
+                                                           
+                                                           },
+                                                           "Ctrl-R": function(instance) {                                                     selected = tabIndexMap[tabs.tabs('option', 'selected')]; // => 0
+                                                           opened_file = tabLabels[selected];
+                                                           $.ajax({
+                                                                  type: 'POST',
+                                                                  url: '/eval',
+                                                                  data: {
+                                                                  code: cm[selected].getSelection()
+                                                                  },
+                                                                  success: function () {
+                                                                  msg('success', "Ran " + opened_file);
+                                                                  },
+                                                                  error: function (xhr, opts) {
+                                                                  msg('error', xhr.responseText);
+                                                                  }
+                                                                  });
+                                                           
+
+                                                           
+                                                           }
+                                                           }
                                                            });
                   cm.push(tempEditor);
                   tabCounter++;
@@ -357,6 +398,24 @@ $(document).ready(function () {
                                                   var box = $(".CodeMirror-wrapping")
                                                   box[0].style.height = (parseInt(box[0].style.height) + 100) + "px";
                                                   });
+                  $('#selection').button().click(function () {
+                                                 selected = tabIndexMap[tabs.tabs('option', 'selected')]; // => 0
+                                                 opened_file = tabLabels[selected];
+                                                 $.ajax({
+                                                        type: 'POST',
+                                                        url: '/eval',
+                                                        data: {
+                                                        code: cm[selected].getSelection()
+                                                        },
+                                                        success: function () {
+                                                        msg('success', "Ran " + opened_file);
+                                                        },
+                                                        error: function (xhr, opts) {
+                                                        msg('error', xhr.responseText);
+                                                        }
+                                                        });
+                                                
+                                                 });
                   
                   $('#open_log').button().click(function () {
                                                 window.open("/html/log.html", "urMus Log", "width=400,height=600,scrollbars=1,resizable=1,location=0");

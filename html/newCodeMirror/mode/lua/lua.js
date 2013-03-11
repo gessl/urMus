@@ -130,7 +130,7 @@ CodeMirror.defineMode("lua", function(config, parserConfig) {
       return style;
     },
 
-    indent: function(state, textAfter) {
+    indent: function(state, textAfter, text) {
       var closing = dedentPartial.test(textAfter);
       return state.basecol + indentUnit * (state.indentDepth - (closing ? 1 : 0));
     }
