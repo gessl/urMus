@@ -292,6 +292,61 @@ void BeeThree_SetModulationDepth(ursObject* gself, double indata)
 
 #endif
 
+
+// Interface - BandPass
+
+void* BandPass_Constructor()
+{
+	BandPass* self=new BandPass;
+	return (void*)self;
+}
+
+void BandPass_Destructor(ursObject* gself)
+{
+	BandPass* self = (BandPass*)gself->objectdata;
+	delete (BandPass*)self;
+}
+
+double BandPass_Tick(ursObject* gself)
+{
+	BandPass* self = ((BandPass*)gself->objectdata);
+	
+	gself->FeedAllPullIns(1); // This is decoupled so no forwarding, just pulling to propagate our natural rate
+    
+	return self->tick(gself->CallAllPullIns());
+}
+
+double BandPass_Out(ursObject* gself)
+{
+	BandPass* self = ((BandPass*)gself->objectdata);
+	return self->lastOut();
+}
+
+// NYI Needs split of parameters here. Excite and setFrequency
+void BandPass_In(ursObject* gself, double indata)
+{
+	BandPass* self = ((BandPass*)gself->objectdata);
+	gself->lastindata[0] =indata;
+	double res = 0;
+	res = self->tick(indata);
+	gself->CallAllPushOuts(res);
+}
+
+void BandPass_SetFrequency(ursObject* gself, double indata)
+{
+	BandPass* self = (BandPass*)gself->objectdata;
+
+	self->setFrequency(norm2Freq(indata));
+}
+
+void BandPass_SetQ(ursObject* gself, double indata)
+{
+	BandPass* self = (BandPass*)gself->objectdata;
+    if ( indata == -1)
+        indata = -0.999999;
+	self->setQ(norm2PositiveLinear(indata));
+}
+
 // Interface - BiQuad
 // NYI This should be separated out into various useful less generic and more "atomic" blocks
 
@@ -354,14 +409,14 @@ void BiQuad_SetNotch(ursObject* gself, double indata)
 {
 	BiQuad_Data* self = (BiQuad_Data*)gself->objectdata;
 	self->notch = norm2Freq(indata);
-	self->stkobject->setResonance(self->notch, self->nq);
+	self->stkobject->setNotch(self->notch, self->nq);
 }
 
 void BiQuad_SetNQ(ursObject* gself, double indata)
 {
 	BiQuad_Data* self = (BiQuad_Data*)gself->objectdata;
 	self->nq = indata;
-	self->stkobject->setResonance(self->notch, self->nq);
+	self->stkobject->setNotch(self->notch, self->nq);
 }	
 
 // Import - Blit
@@ -1239,6 +1294,15 @@ void Envelope_In(ursObject* gself, double indata)
 	gself->CallAllPushOuts(res);
 }
 
+void Envelope_Trigger(ursObject* gself, double indata)
+{
+	Envelope* self = (Envelope*)gself->objectdata;
+    if (indata > 0) // ATTACK
+        self->keyOn();
+    else            // RELEASE
+        self->keyOff();
+}
+
 void Envelope_SetTarget(ursObject* gself, double indata)
 {
 	Envelope* self = (Envelope*)gself->objectdata;
@@ -1804,25 +1868,50 @@ void Moog_SetModulationDepth(ursObject* gself, double indata)
 
 // Interface - Noise
 
+class EXNoise : public Noise
+{
+public:
+    EXNoise():Noise() { amplitude = DEFAULT_INSTRUMENT_AMPLITUDE;}
+    double amplitude;
+};
+
 void* Noise_Constructor()
 {
-	Noise* self = new Noise();
+	EXNoise* self = new EXNoise();
 	return (void*)self;
 }
 
 void Noise_Destructor(ursObject* gself)
 {
-	Noise* self = (Noise*)gself->objectdata;
-	delete (Noise*)self;
+	EXNoise* self = (EXNoise*)gself->objectdata;
+	delete (EXNoise*)self;
 }
 
 double Noise_Tick(ursObject* gself)
 {
-	Noise* self = (Noise*)gself->objectdata;
+	EXNoise* self = (EXNoise*)gself->objectdata;
 	
 	gself->FeedAllPullIns(1); // This is decoupled so no forwarding, just pulling to propagate our natural rate
 
-	return gself->CallAllPullIns()*self->tick();
+//	return gself->CallAllPullIns()*self->tick();
+	return self->tick()* self->amplitude;
+}
+
+void Noise_SetSeed(ursObject* gself, double indata)
+{
+	EXNoise* self = (EXNoise*)gself->objectdata;
+    
+    unsigned int seed = (indata +1 ) /2.0 * INT_MAX;
+    
+    self->setSeed(seed);
+    
+}
+
+void Noise_SetAmp(ursObject* gself, double indata)
+{
+	EXNoise* self = (EXNoise*)gself->objectdata;
+    
+    self->amplitude = indata;
 }
 
 double Noise_Out(ursObject* gself)
@@ -2932,6 +3021,15 @@ void urSTK_Setup()
 	object->SetCouple(0,0);
     addSTKNote(object);
 	urmanipulatorobjectlist.Append(object);
+    
+    object = new ursObject("BandPass", BandPass_Constructor, BandPass_Destructor,3,1);
+	object->AddOut("Out", "TimeSeries", BandPass_Tick, BandPass_Out, NULL);
+	object->AddIn("In", "Generic", BandPass_In);
+	object->AddIn("Freq", "Freq", BandPass_SetFrequency);
+	object->AddIn("Q", "Q", BandPass_SetQ);
+	object->SetCouple(0,0);
+    addSTKNote(object);
+	urmanipulatorobjectlist.Append(object);
 	
 	object = new ursObject("Blit", Blit_Constructor, Blit_Destructor,3,1);
 	object->AddOut("Out", "TimeSeries", Blit_Tick, Blit_Out, NULL);
@@ -3059,9 +3157,10 @@ void urSTK_Setup()
     addSTKNote(object);
 	urmanipulatorobjectlist.Append(object);
 	
-	object = new ursObject("Env", Envelope_Constructor, Envelope_Destructor,2,1);
+	object = new ursObject("Env", Envelope_Constructor, Envelope_Destructor,3,1);
 	object->AddOut("Out", "TimeSeries", Envelope_Tick, Envelope_Out, NULL);
 //	object->AddIn("In", "Generic", Envelope_In);
+    object->AddIn("Trigger", "Trigger", Envelope_Trigger);
     object->AddIn("Target", "Sample", Envelope_SetTarget);
     object->AddIn("Rate", "Rate", Envelope_SetRate);
 //	object->AddIn("Time", "Time", Envelope_SetTime);
@@ -3358,9 +3457,12 @@ void urSTK_Setup()
 	
 	// Sources
 	
-//	object = new ursObject("Noise", Noise_Constructor, Noise_Destructor,0,1);
-//	object->AddOut("Out", "TimeSeries", Noise_Tick, Noise_Out, NULL);
-//	ursourceobjectlist.Append(object);
+	object = new ursObject("Noise", Noise_Constructor, Noise_Destructor,2,1);
+	object->AddOut("Out", "TimeSeries", Noise_Tick, Noise_Out, NULL);
+	object->AddIn("Seed", "Generic", Noise_SetSeed);
+   	object->AddIn("Amp", "Amplitude", Noise_SetAmp);
+    
+	urmanipulatorobjectlist.Append(object);
 
 
 }

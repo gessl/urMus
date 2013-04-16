@@ -54,6 +54,9 @@
 #include "Whistle.h"
 #include "Wurley.h"
 
+// Sang Added
+#include "BandPass.h"
+
 #define DEFAULT_INSTRUMENT_RATE 0.2
 #define DEFAULT_INSTRUMENT_AMPLITUDE 1.0
 

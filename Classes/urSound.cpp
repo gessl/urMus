@@ -2605,7 +2605,7 @@ void Add_In2(ursObject* gself, double indata)
 	double out = self->lastin1 + self->lastin2;
 	gself->CallAllPushOuts(out);
 }
-
+// -- Binary comparators
 
 void* Min_Constructor()
 {
@@ -2940,6 +2940,7 @@ void urs_SetupObjects()
 	object->AddIn("Len", "Length", Avg_Len);
 	object->SetCouple(0,0);
 	urmanipulatorobjectlist.Append(object);
+    
 	
     
      object = new ursObject("Tuner", Tuner_Constructor, Tuner_Destructor,1,1);
@@ -2955,14 +2956,14 @@ void urs_SetupObjects()
      object->SetCouple(0,0);
      urmanipulatorobjectlist.Append(object);
      
-     
+    
      object = new ursObject("Drain", Drain_Constructor, Drain_Destructor,1,2);
      object->AddOut("Out", "TimeSeries", Drain_Out, NULL, NULL);
      object->AddOut("Time", "Timing", Drain_Time, NULL, NULL);
      object->AddIn("In", "TimeSeries", Drain_In);
      object->SetCouple(0,0);
      urmanipulatorobjectlist.Append(object);
-     
+  
      object = new ursObject("Sniff", Sniff_Constructor, Sniff_Destructor,1,2);
      object->AddOut("Out", "TimeSeries", Sniff_Out, NULL, NULL);
      object->AddOut("Sniff", "TimeSeries", Sniff_Sniff, NULL, NULL);
@@ -2976,15 +2977,15 @@ void urs_SetupObjects()
      object->AddIn("In", "TimeSeries", SniffL_In);
      object->SetCouple(0,0);
      urmanipulatorobjectlist.Append(object);
-     
-	object = new ursObject("Dist3", ThreeDist_Constructor, ThreeDist_Destructor,4,1);
+
+    object = new ursObject("Dist3", ThreeDist_Constructor, ThreeDist_Destructor,4,1);
 	object->AddOut("Out", "TimeSeries", ThreeDist_Tick, ThreeDist_Out, NULL);
 	object->AddIn("In1", "TimeSeries", ThreeDist_In1);
 	object->AddIn("In2", "TimeSeries", ThreeDist_In2);
 	object->AddIn("In3", "TimeSeries", ThreeDist_In3);
 	object->AddIn("Train", "TimeSeries", ThreeDist_Train);
 	urmanipulatorobjectlist.Append(object);
-    
+
     object = new ursObject("Add", Add_Constructor, Add_Destructor,2,1);
 	object->AddOut("Out", "TimeSeries", Add_Tick, Add_Out, NULL);
 	object->AddIn("In1", "TimeSeries", Add_In1);

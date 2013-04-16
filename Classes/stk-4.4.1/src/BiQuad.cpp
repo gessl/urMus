@@ -53,6 +53,7 @@ void BiQuad :: sampleRateChanged( StkFloat newRate, StkFloat oldRate )
 
 void BiQuad :: setResonance(StkFloat frequency, StkFloat radius, bool normalize)
 {
+     
   a_[2] = radius * radius;
   a_[1] = -2.0 * radius * cos( TWO_PI * frequency / Stk::sampleRate() );
 
@@ -62,6 +63,7 @@ void BiQuad :: setResonance(StkFloat frequency, StkFloat radius, bool normalize)
     b_[1] = 0.0;
     b_[2] = -b_[0];
   }
+    
 }
 
 void BiQuad :: setNotch(StkFloat frequency, StkFloat radius)

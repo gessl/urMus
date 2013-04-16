@@ -17,6 +17,7 @@
 		23C5612A1192A56900758BB9 /* httpServer.c in Sources */ = {isa = PBXBuildFile; fileRef = 23C561291192A56900758BB9 /* httpServer.c */; };
 		23D069FA1198FF330031847C /* urBlank.lua in Resources */ = {isa = PBXBuildFile; fileRef = 23D069EC1198FEEB0031847C /* urBlank.lua */; };
 		28FD14FE0DC6FC130079059D /* EAGLView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 28FD14FD0DC6FC130079059D /* EAGLView.mm */; };
+		73FBD4D316F7C9FE0032151E /* BandPass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73FBD4D216F7C9FE0032151E /* BandPass.cpp */; };
 		7700BFCD104AF4120025D43A /* connectarrow2.png in Resources */ = {isa = PBXBuildFile; fileRef = 7700BFCC104AF4120025D43A /* connectarrow2.png */; };
 		7700C06B104B2DA70025D43A /* leftarrow.png in Resources */ = {isa = PBXBuildFile; fileRef = 7700C069104B2DA70025D43A /* leftarrow.png */; };
 		7700C06C104B2DA70025D43A /* rightarrow.png in Resources */ = {isa = PBXBuildFile; fileRef = 7700C06A104B2DA70025D43A /* rightarrow.png */; };
@@ -566,6 +567,8 @@
 		28FD14FD0DC6FC130079059D /* EAGLView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EAGLView.mm; sourceTree = "<group>"; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = main.m; sourceTree = "<group>"; };
 		32CA4F630368D1EE00C91783 /* urMus_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = urMus_Prefix.pch; sourceTree = "<group>"; };
+		73FBD4CF16F7C9F10032151E /* BandPass.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BandPass.h; sourceTree = "<group>"; };
+		73FBD4D216F7C9FE0032151E /* BandPass.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BandPass.cpp; sourceTree = "<group>"; };
 		7700BFCC104AF4120025D43A /* connectarrow2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = connectarrow2.png; path = Textures/connectarrow2.png; sourceTree = "<group>"; };
 		7700C069104B2DA70025D43A /* leftarrow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = leftarrow.png; path = Textures/leftarrow.png; sourceTree = "<group>"; };
 		7700C06A104B2DA70025D43A /* rightarrow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = rightarrow.png; path = Textures/rightarrow.png; sourceTree = "<group>"; };
@@ -1798,6 +1801,7 @@
 		77B56C8D10894E48008931AC /* include */ = {
 			isa = PBXGroup;
 			children = (
+				73FBD4CF16F7C9F10032151E /* BandPass.h */,
 				77B56C8E10894E48008931AC /* ADSR.h */,
 				77B56C8F10894E48008931AC /* Asymp.h */,
 				77B56C9010894E48008931AC /* BandedWG.h */,
@@ -1888,6 +1892,7 @@
 		77B56CF310894E48008931AC /* src */ = {
 			isa = PBXGroup;
 			children = (
+				73FBD4D216F7C9FE0032151E /* BandPass.cpp */,
 				77B56DE510894FE7008931AC /* ADSR.cpp */,
 				77B56DE610894FE7008931AC /* Asymp.cpp */,
 				77B56DE710894FE7008931AC /* BandedWG.cpp */,
@@ -3031,6 +3036,7 @@
 				774D92FB16534910000C651D /* FAIAP.lua in Sources */,
 				77076DAD166411D100004C22 /* urNetDiscoveryTest.lua in Sources */,
 				77076DAE166411D100004C22 /* urTest.lua in Sources */,
+				73FBD4D316F7C9FE0032151E /* BandPass.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3051,7 +3057,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CODE_SIGN_IDENTITY = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -3074,8 +3080,8 @@
 					"-fobjc-arc",
 				);
 				PRODUCT_NAME = urMus;
-				PROVISIONING_PROFILE = "97AD0390-29CF-4C17-BE1F-096EF7A38A7A";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
+				PROVISIONING_PROFILE = "1A1E5A9E-CBB5-4972-A7FB-86762A2282AB";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "1A1E5A9E-CBB5-4972-A7FB-86762A2282AB";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "i386 armv7 armv7s";
@@ -3088,7 +3094,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CODE_SIGN_IDENTITY = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
 				COPY_PHASE_STRIP = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = urMus_Prefix.pch;
@@ -3109,8 +3115,8 @@
 					"-fobjc-arc",
 				);
 				PRODUCT_NAME = urMus;
-				PROVISIONING_PROFILE = "97AD0390-29CF-4C17-BE1F-096EF7A38A7A";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
+				PROVISIONING_PROFILE = "1A1E5A9E-CBB5-4972-A7FB-86762A2282AB";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "1A1E5A9E-CBB5-4972-A7FB-86762A2282AB";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "i386 armv7 armv7s";
@@ -3121,7 +3127,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -3132,7 +3139,8 @@
 					"-ObjC",
 					"-fobjc-arc",
 				);
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
+				PROVISIONING_PROFILE = "1A1E5A9E-CBB5-4972-A7FB-86762A2282AB";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "1A1E5A9E-CBB5-4972-A7FB-86762A2282AB";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -3142,7 +3150,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Sang Won Lee (87C9FBN9D9)";
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -3152,7 +3161,8 @@
 					"-ObjC",
 					"-fobjc-arc",
 				);
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
+				PROVISIONING_PROFILE = "1A1E5A9E-CBB5-4972-A7FB-86762A2282AB";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "1A1E5A9E-CBB5-4972-A7FB-86762A2282AB";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
