@@ -375,6 +375,16 @@ struct Comp_Data
 	Comp_Data() { lastin1 = lastin2 = 0; }
 };
 
+struct Demux_Data
+{
+    int mutex_fan;
+    int mutex_lines;
+    int current_mutex;
+    float *lastoutput;
+    Demux_Data(int lines = 3, int fan = 16) { mutex_fan = fan; mutex_lines = lines; current_mutex = 0; lastoutput = new float[lines]; }
+    ~Demux_Data() { delete lastoutput; }
+};
+
 class ursSinkList
 {
 public:

@@ -10,11 +10,11 @@ local random = math.random
 
 local numrepetitions = 3
 local minradius = ScreenWidth()/3
-local maxradius = ScreenWidth()/4*3
+local maxradius = ScreenWidth()/8*7
 local minspeed = 1*30.0
 local maxspeed = 5*30.0
-local minfontsize = 12
-local maxfontsize = 24
+local minfontsize = 24
+local maxfontsize = 36
 
 local words = {"record","fun","urMus","spin","turn","motion","bend","repeat","clock","emerge","period","Moebius","circle","torus","closed","curve","arc","delta"}
 
@@ -34,7 +34,7 @@ function rotate(self, elapsed)
     end
    
     local r,g,b = self.tl:Color()
-    self.tl:SetColor(r,g,b,self.alpha)
+    self.tl:SetColor(r,g,b,255)--self.alpha)
 end
 
 
@@ -77,4 +77,4 @@ pagebutton.texture:SetBlendMode("BLEND")
 pagebutton:EnableInput(true)
 pagebutton:Show()
 
-DPrint("yarg")
+DPrint("")

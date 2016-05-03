@@ -31,14 +31,14 @@ $(document).ready(function () {
                            this.element.jPlayer("play");
                            });
                   /*
-                  tabs.find(".ui-tabs-nav").sortable({
-                                                     axis: "x",
-                                                     stop: function () {
-                                                     tabs.tabs("refresh");
-                                                     }
-                                                     });
-             
-                  */
+                   tabs.find(".ui-tabs-nav").sortable({
+                   axis: "x",
+                   stop: function () {
+                   tabs.tabs("refresh");
+                   }
+                   });
+                   
+                   */
                   // modal dialog init: custom buttons and a "close" callback reseting the form inside
                   var dialog = $("#dialog").dialog({
                                                    autoOpen: false,
@@ -57,21 +57,21 @@ $(document).ready(function () {
                                                    }
                                                    });
                   var rdialog = $("#rdialog").dialog({
-                                                   autoOpen: false,
-                                                   modal: true,
-                                                   buttons: {
-                                                   Add: function () {
-                                                   
-                                                   $(this).dialog("close");
-                                                   },
-                                                   Cancel: function () {
-                                                   $(this).dialog("close");
-                                                   }
-                                                   },
-                                                   close: function () {
-                                                   form[0].reset();
-                                                   }
-                                                   });
+                                                     autoOpen: false,
+                                                     modal: true,
+                                                     buttons: {
+                                                     Add: function () {
+                                                     
+                                                     $(this).dialog("close");
+                                                     },
+                                                     Cancel: function () {
+                                                     $(this).dialog("close");
+                                                     }
+                                                     },
+                                                     close: function () {
+                                                     form[0].reset();
+                                                     }
+                                                     });
                   
                   // addTab form: calls addTab function on submit and closes the dialog
                   var form = dialog.find("form").submit(function (event) {
@@ -108,31 +108,31 @@ $(document).ready(function () {
                   .button()
                   .click(function () {
                          tabTitle.val("");
-
+                         
                          dialog.dialog("open");
                          });
                   
                   // close icon: removing the tab on click
                   $("#tabs span.ui-icon-close").live("click", function () {
                                                      if (confirm('Are you sure you want to delete this tab?')) {
-                                          
+                                                     
                                                      var panelId = $(this).closest("li").remove().attr("aria-controls");
-                                           
+                                                     
                                                      for (i=0; i<tabIndexMap.length; i++)
                                                      {
-                                                        if(tabIndexMap[i]==parseInt(panelId))
-                                                        {
+                                                     if(tabIndexMap[i]==parseInt(panelId))
+                                                     {
                                                      cm[tabIndexMap[i]] = null;
                                                      tabLabels[tabIndexMap[i]] = null;
-                                                            tabIndexMap.splice(i,1);
-                                                            break;
-                                                        }
+                                                     tabIndexMap.splice(i,1);
+                                                     break;
                                                      }
-                                          
+                                                     }
+                                                     
                                                      
                                                      selected = tabIndexMap[tabs.tabs('option', 'selected')]; // => 0
-
-                                                    $("#" + panelId).remove();
+                                                     
+                                                     $("#" + panelId).remove();
                                                      tabs.tabs("refresh");
                                                      }
                                                      });
@@ -165,7 +165,7 @@ $(document).ready(function () {
                                                                   }
                                                                   });
                                                            
-
+                                                           
                                                            
                                                            },
                                                            "Ctrl-R": function(instance) {                                                     selected = tabIndexMap[tabs.tabs('option', 'selected')]; // => 0
@@ -184,7 +184,7 @@ $(document).ready(function () {
                                                                   }
                                                                   });
                                                            
-
+                                                           
                                                            
                                                            }
                                                            }
@@ -219,12 +219,12 @@ $(document).ready(function () {
                                                                                                                                                    msg('success', "Loaded " + fname);
                                                                                                                                                    fl.slideUp(function () {
                                                                                                                                                               tabTitle.val(fname);
-                                                                                              addTab();                                                                                                                                                              cm[cm.length - 1].setValue(script);
+                                                                                                                                                              addTab();                                                                                                                                                              cm[cm.length - 1].setValue(script);
                                                                                                                                                               cm[cm.length - 1].refresh();
                                                                                                                                                               cm[cm.length - 1].focus();
                                                                                                                                                               
                                                                                                                                                               });
-                                                                                                                                                  // setOpenedFile(fname);
+                                                                                                                                                   // setOpenedFile(fname);
                                                                                                                                                    });
                                                                                                                                              });
                                                                                        files.append(li);
@@ -314,18 +314,18 @@ $(document).ready(function () {
                                                     
                                                     });
                   /*
-                  
-                  function setOpenedFile(fname) {
-                  opened_file = fname;
-                  $('#save_file').removeAttr('disabled');
-                  }
-                  */
+                   
+                   function setOpenedFile(fname) {
+                   opened_file = fname;
+                   $('#save_file').removeAttr('disabled');
+                   }
+                   */
                   
                   function msg(type, msg) {
                   s.attr('class', type).html(msg);
                   }
                   
-                  // on submission of inline text, eval code 
+                  // on submission of inline text, eval code
                   $('#small_code_button').button().click(function () {
                                                          $.ajax({
                                                                 type: 'POST',
@@ -414,7 +414,7 @@ $(document).ready(function () {
                                                         msg('error', xhr.responseText);
                                                         }
                                                         });
-                                                
+                                                 
                                                  });
                   
                   $('#open_log').button().click(function () {
@@ -430,15 +430,15 @@ $(document).ready(function () {
                                  }
                                  });
                   
-            /*      $.get('/open_file', {
-                        file: "urBlank.lua",
-                        dirtype: 'root'
-                        }, function (script) {
-                        selected = tabIndexMap[tabs.tabs('option', 'selected')]; // => 0
-                        msg('success', "Loaded " + "urBlank.lua");
-                        cm[selected].setValue(script);
-                        setOpenedFile("urBlank.lua");
-                        });
-               
-                  */
+                  /*      $.get('/open_file', {
+                   file: "urBlank.lua",
+                   dirtype: 'root'
+                   }, function (script) {
+                   selected = tabIndexMap[tabs.tabs('option', 'selected')]; // => 0
+                   msg('success', "Loaded " + "urBlank.lua");
+                   cm[selected].setValue(script);
+                   setOpenedFile("urBlank.lua");
+                   });
+                   
+                   */
                   });

@@ -18,6 +18,7 @@
 #include <ifaddrs.h> 
 #include <arpa/inet.h>
 
+pthread_mutex_t monet_mutex = PTHREAD_MUTEX_INITIALIZER; // Network threat safety
 
 //-----------------------------------------------------------------------------
 // name: instance()
@@ -26,7 +27,11 @@
 MoThread MoNet::m_thread;
 bool MoNet::m_thread_started = false;
 long MoNet::m_listening_port = 6449;
-unsigned int MoNet::m_output_buffer_size = 1024;
+
+#define IP_MTU_SIZE 1536
+
+//unsigned int MoNet::m_output_buffer_size = 1024;
+unsigned int MoNet::m_output_buffer_size = IP_MTU_SIZE;
 std::map<std::string, MoNetCallback> MoNet::m_pattern_callbacks;
 
 
@@ -111,6 +116,7 @@ long MoNet::getListeningPort()
 void MoNetOSCPacketListener::ProcessMessage( const osc::ReceivedMessage & m, 
                                              const IpEndpointName & remoteEndpoint )
 {
+    pthread_mutex_lock( &monet_mutex );
     try
     {
         std::string pattern = m.AddressPattern();
@@ -119,7 +125,9 @@ void MoNetOSCPacketListener::ProcessMessage( const osc::ReceivedMessage & m,
         
         if( it != MoNet::m_pattern_callbacks.end() ) {
             osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
-            MoNet::m_pattern_callbacks[pattern].callback( args, MoNet::m_pattern_callbacks[pattern].data );
+            osc::ReceivedMessage::const_iterator arg = m.ArgumentsBegin();
+
+            MoNet::m_pattern_callbacks[pattern].callback( args, arg, MoNet::m_pattern_callbacks[pattern].data );
         } else {
             std::cerr << "[mopho]: no callback has been registerd for: '"
                       << pattern  << "' pattern address\n";
@@ -130,6 +138,7 @@ void MoNetOSCPacketListener::ProcessMessage( const osc::ReceivedMessage & m,
         std::cerr << "[mopho]: error while parsing message: "
                   << m.AddressPattern() << ": " << e.what() << "\n";
     }
+    pthread_mutex_unlock( &monet_mutex );
 }
 
 
@@ -171,6 +180,7 @@ void MoNet::sendMessage( const std::string &ip,
                          uint size, 
                          ... )
 {
+    pthread_mutex_lock( &monet_mutex );
     unsigned int ipHex = stringIPtoHEX( ip );
     
     // TODO: this could be opened only once somewhere else to improve 
@@ -185,7 +195,8 @@ void MoNet::sendMessage( const std::string &ip,
     va_start( args, size ); 
 
     // TODO: do we want to send bundles or just messages?
-    p << osc::BeginBundleImmediate << osc::BeginMessage( pattern_address.c_str() );
+//    p << osc::BeginBundleImmediate << osc::BeginMessage( pattern_address.c_str() );
+    p << osc::BeginMessage( pattern_address.c_str() );
     for( int i = 0; i < size; i++ )
     {
         if( types[i] == 'i' ) { // OSC-int32 
@@ -201,9 +212,12 @@ void MoNet::sendMessage( const std::string &ip,
         // TODO: handle OSC-blob type, defined in the OSC specs
     }
     va_end( args );
-    p << osc::EndMessage << osc::EndBundle;
+//    p << osc::EndMessage << osc::EndBundle;
+    p << osc::EndMessage;
 
     transmitSocket.Send( p.Data(), p.Size() );
+    pthread_mutex_unlock( &monet_mutex );
+
 }
 
 // Added by gessl 11/23/10 to allow easier var arg passing from lua
@@ -219,13 +233,14 @@ void MoNet::startSendStream(const std::string &ip,
 	mytransmitSocket = new UdpTransmitSocket(IpEndpointName(ipHex, port));
 }
 
-char buffer[1024];
-osc::OutboundPacketStream p( buffer, 1024 );
+char buffer[IP_MTU_SIZE];
+osc::OutboundPacketStream p( buffer, IP_MTU_SIZE );
 
 void MoNet::startSendMessage(const std::string &pattern_address)
 {
     // TODO: do we want to send bundles or just messages?
-    p << osc::BeginBundleImmediate << osc::BeginMessage( pattern_address.c_str() );
+//    p << osc::BeginBundleImmediate << osc::BeginMessage( pattern_address.c_str() );
+    p << osc::BeginMessage( pattern_address.c_str() );
 }
 
 void MoNet::addSendInt(int i)
@@ -245,7 +260,8 @@ void MoNet::addSendString(const char* s)
 
 void MoNet::endSendMessage()
 {
-    p << osc::EndMessage << osc::EndBundle;
+//    p << osc::EndMessage << osc::EndBundle;
+    p << osc::EndMessage;
     mytransmitSocket->Send( p.Data(), p.Size() );
 	p.Clear();
 }

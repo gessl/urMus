@@ -28,7 +28,7 @@
 //#define GPUIMAGE
 #endif
 // Enabled Apple's font rendering rather than FreeType2/Glyph Atlas code. The Apple rendering is stable but not portable.
-#define UISTRINGS
+#undef UISTRINGS
 
 #ifndef UISTRINGS
 // Use FTGL library for gylph atlas code. Recommended for speed.

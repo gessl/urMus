@@ -1899,6 +1899,15 @@ void Sample_SetPos(ursObject* gself, double inpos)
 		self->playing = true;
 }
 
+void Sample_Trigger(ursObject* gself, double amp)
+{
+    if(amp > 0.0)
+    {
+        Sample_SetAmp(gself, amp);
+        Sample_SetPos(gself,0.0);
+    }
+}
+
 void Sample_SetSample(ursObject* gself, double insample)
 {
 	Sample_Data* self = (Sample_Data*)gself->objectdata;
@@ -3127,6 +3136,129 @@ void MaxS_In2(ursObject* gself, double indata)
 	gself->CallAllPushOuts(out);
 }
 
+// --
+
+
+void* Demux316_Constructor()
+{
+	Demux_Data* self = new Demux_Data;
+	return (void*)self;
+}
+
+void Demux316_Destructor(ursObject* gself)
+{
+	Demux_Data* self = (Demux_Data*)gself->objectdata;
+	delete self;
+}
+
+/*
+double Demux316_Tick(ursObject* gself)
+{
+	Demux_Data* self = (Demux_Data*)gself->objectdata;
+	gself->FeedAllPullIns();
+	float res = fmax(self->lastin1, self->lastin2);
+	
+	if(res == self->lastin1)
+		self->lastout = -1.0;
+	else
+		self->lastout = 1.0;
+	
+	return self->lastout;
+}
+ */
+
+double Demux316_Out(ursObject* gself, int idx)
+{
+	Demux_Data* self = (Demux_Data*)gself->objectdata;
+    
+    
+    if(self->current_mutex == idx/3)
+    {
+        if(gself->firstpullin[idx%3]!=NULL)
+        {
+            float res = gself->CallAllPullIns(idx%3);
+            self->lastoutput[idx] = res;
+            return res;
+        }
+    }
+    
+    return self->lastoutput[idx];
+}
+
+void Demux316_In(ursObject* gself, double indata, int idx)
+{
+	Demux_Data* self = (Demux_Data*)gself->objectdata;
+	gself->CallAllPushOuts(indata,idx+self->current_mutex*3);
+}
+
+void Demux316_Next(ursObject* gself, double indata)
+{
+    Demux_Data* self = (Demux_Data*)gself->objectdata;
+    if(indata != 0.0) // Revisit. Only nexting when nonzero.
+    {
+        self->current_mutex ++;
+        self->current_mutex = self->current_mutex % 16;
+    }
+    // This does not couple to anything!
+}
+
+//
+
+void Demux316_In1(ursObject* gself, double indata) { Demux316_In(gself, indata, 0); }
+void Demux316_In2(ursObject* gself, double indata) { Demux316_In(gself, indata, 1); }
+void Demux316_In3(ursObject* gself, double indata) { Demux316_In(gself, indata, 2); }
+
+double Demux316_Out1_1(ursObject* gself) { return Demux316_Out(gself, 0); }
+double Demux316_Out1_2(ursObject* gself) { return Demux316_Out(gself, 1); }
+double Demux316_Out1_3(ursObject* gself) { return Demux316_Out(gself, 2); }
+double Demux316_Out2_1(ursObject* gself) { return Demux316_Out(gself, 3); }
+double Demux316_Out2_2(ursObject* gself) { return Demux316_Out(gself, 4); }
+double Demux316_Out2_3(ursObject* gself) { return Demux316_Out(gself, 5); }
+double Demux316_Out3_1(ursObject* gself) { return Demux316_Out(gself, 6); }
+double Demux316_Out3_2(ursObject* gself) { return Demux316_Out(gself, 7); }
+double Demux316_Out3_3(ursObject* gself) { return Demux316_Out(gself, 8); }
+double Demux316_Out4_1(ursObject* gself) { return Demux316_Out(gself, 9); }
+double Demux316_Out4_2(ursObject* gself) { return Demux316_Out(gself, 10); }
+double Demux316_Out4_3(ursObject* gself) { return Demux316_Out(gself, 11); }
+double Demux316_Out5_1(ursObject* gself) { return Demux316_Out(gself, 12); }
+double Demux316_Out5_2(ursObject* gself) { return Demux316_Out(gself, 13); }
+double Demux316_Out5_3(ursObject* gself) { return Demux316_Out(gself, 14); }
+double Demux316_Out6_1(ursObject* gself) { return Demux316_Out(gself, 15); }
+double Demux316_Out6_2(ursObject* gself) { return Demux316_Out(gself, 16); }
+double Demux316_Out6_3(ursObject* gself) { return Demux316_Out(gself, 17); }
+double Demux316_Out7_1(ursObject* gself) { return Demux316_Out(gself, 18); }
+double Demux316_Out7_2(ursObject* gself) { return Demux316_Out(gself, 19); }
+double Demux316_Out7_3(ursObject* gself) { return Demux316_Out(gself, 20); }
+double Demux316_Out8_1(ursObject* gself) { return Demux316_Out(gself, 21); }
+double Demux316_Out8_2(ursObject* gself) { return Demux316_Out(gself, 22); }
+double Demux316_Out8_3(ursObject* gself) { return Demux316_Out(gself, 23); }
+double Demux316_Out9_1(ursObject* gself) { return Demux316_Out(gself, 24); }
+double Demux316_Out9_2(ursObject* gself) { return Demux316_Out(gself, 25); }
+double Demux316_Out9_3(ursObject* gself) { return Demux316_Out(gself, 26); }
+double Demux316_Out10_1(ursObject* gself) { return Demux316_Out(gself, 27); }
+double Demux316_Out10_2(ursObject* gself) { return Demux316_Out(gself, 28); }
+double Demux316_Out10_3(ursObject* gself) { return Demux316_Out(gself, 29); }
+double Demux316_Out11_1(ursObject* gself) { return Demux316_Out(gself, 30); }
+double Demux316_Out11_2(ursObject* gself) { return Demux316_Out(gself, 31); }
+double Demux316_Out11_3(ursObject* gself) { return Demux316_Out(gself, 32); }
+double Demux316_Out12_1(ursObject* gself) { return Demux316_Out(gself, 33); }
+double Demux316_Out12_2(ursObject* gself) { return Demux316_Out(gself, 34); }
+double Demux316_Out12_3(ursObject* gself) { return Demux316_Out(gself, 35); }
+double Demux316_Out13_1(ursObject* gself) { return Demux316_Out(gself, 36); }
+double Demux316_Out13_2(ursObject* gself) { return Demux316_Out(gself, 37); }
+double Demux316_Out13_3(ursObject* gself) { return Demux316_Out(gself, 38); }
+double Demux316_Out14_1(ursObject* gself) { return Demux316_Out(gself, 39); }
+double Demux316_Out14_2(ursObject* gself) { return Demux316_Out(gself, 40); }
+double Demux316_Out14_3(ursObject* gself) { return Demux316_Out(gself, 41); }
+double Demux316_Out15_1(ursObject* gself) { return Demux316_Out(gself, 42); }
+double Demux316_Out15_2(ursObject* gself) { return Demux316_Out(gself, 43); }
+double Demux316_Out15_3(ursObject* gself) { return Demux316_Out(gself, 44); }
+double Demux316_Out16_1(ursObject* gself) { return Demux316_Out(gself, 45); }
+double Demux316_Out16_2(ursObject* gself) { return Demux316_Out(gself, 46); }
+double Demux316_Out16_3(ursObject* gself) { return Demux316_Out(gself, 47); }
+
+// --
+
 ursObject* sinobject;
 ursObject* nopeobject;
 ursObject* sampleobject;
@@ -3317,6 +3449,61 @@ void urs_SetupObjects()
 	object->AddIn("In2", "TimeSeries", MaxS_In2);
 	urmanipulatorobjectlist.Append(object);
 	
+	object = new ursObject("Demux", Demux316_Constructor, Demux316_Destructor,4,48);
+	object->AddOut("Out1_1", "TimeSeries", Demux316_Out1_1, NULL, NULL);
+	object->AddOut("Out1_2", "TimeSeries", Demux316_Out1_2, NULL, NULL);
+	object->AddOut("Out1_3", "TimeSeries", Demux316_Out1_3, NULL, NULL);
+	object->AddOut("Out2_1", "TimeSeries", Demux316_Out2_1, NULL, NULL);
+	object->AddOut("Out2_2", "TimeSeries", Demux316_Out2_2, NULL, NULL);
+	object->AddOut("Out2_3", "TimeSeries", Demux316_Out2_3, NULL, NULL);
+	object->AddOut("Out3_1", "TimeSeries", Demux316_Out3_1, NULL, NULL);
+	object->AddOut("Out3_2", "TimeSeries", Demux316_Out3_2, NULL, NULL);
+	object->AddOut("Out3_3", "TimeSeries", Demux316_Out3_3, NULL, NULL);
+	object->AddOut("Out4_1", "TimeSeries", Demux316_Out4_1, NULL, NULL);
+	object->AddOut("Out4_2", "TimeSeries", Demux316_Out4_2, NULL, NULL);
+	object->AddOut("Out4_3", "TimeSeries", Demux316_Out4_3, NULL, NULL);
+	object->AddOut("Out5_1", "TimeSeries", Demux316_Out5_1, NULL, NULL);
+	object->AddOut("Out5_2", "TimeSeries", Demux316_Out5_2, NULL, NULL);
+	object->AddOut("Out5_3", "TimeSeries", Demux316_Out5_3, NULL, NULL);
+	object->AddOut("Out6_1", "TimeSeries", Demux316_Out6_1, NULL, NULL);
+	object->AddOut("Out6_2", "TimeSeries", Demux316_Out6_2, NULL, NULL);
+	object->AddOut("Out6_3", "TimeSeries", Demux316_Out6_3, NULL, NULL);
+	object->AddOut("Out7_1", "TimeSeries", Demux316_Out7_1, NULL, NULL);
+	object->AddOut("Out7_2", "TimeSeries", Demux316_Out7_2, NULL, NULL);
+	object->AddOut("Out7_3", "TimeSeries", Demux316_Out7_3, NULL, NULL);
+	object->AddOut("Out8_1", "TimeSeries", Demux316_Out8_1, NULL, NULL);
+	object->AddOut("Out8_2", "TimeSeries", Demux316_Out8_2, NULL, NULL);
+	object->AddOut("Out8_3", "TimeSeries", Demux316_Out8_3, NULL, NULL);
+	object->AddOut("Out9_1", "TimeSeries", Demux316_Out9_1, NULL, NULL);
+	object->AddOut("Out9_2", "TimeSeries", Demux316_Out9_2, NULL, NULL);
+	object->AddOut("Out9_3", "TimeSeries", Demux316_Out9_3, NULL, NULL);
+	object->AddOut("Out10_1", "TimeSeries", Demux316_Out10_1, NULL, NULL);
+	object->AddOut("Out10_2", "TimeSeries", Demux316_Out10_2, NULL, NULL);
+	object->AddOut("Out10_3", "TimeSeries", Demux316_Out10_3, NULL, NULL);
+	object->AddOut("Out11_1", "TimeSeries", Demux316_Out11_1, NULL, NULL);
+	object->AddOut("Out11_2", "TimeSeries", Demux316_Out11_2, NULL, NULL);
+	object->AddOut("Out11_3", "TimeSeries", Demux316_Out11_3, NULL, NULL);
+	object->AddOut("Out12_1", "TimeSeries", Demux316_Out12_1, NULL, NULL);
+	object->AddOut("Out12_2", "TimeSeries", Demux316_Out12_2, NULL, NULL);
+	object->AddOut("Out12_3", "TimeSeries", Demux316_Out12_3, NULL, NULL);
+	object->AddOut("Out13_1", "TimeSeries", Demux316_Out13_1, NULL, NULL);
+	object->AddOut("Out13_2", "TimeSeries", Demux316_Out13_2, NULL, NULL);
+	object->AddOut("Out13_3", "TimeSeries", Demux316_Out13_3, NULL, NULL);
+	object->AddOut("Out14_1", "TimeSeries", Demux316_Out14_1, NULL, NULL);
+	object->AddOut("Out14_2", "TimeSeries", Demux316_Out14_2, NULL, NULL);
+	object->AddOut("Out14_3", "TimeSeries", Demux316_Out14_3, NULL, NULL);
+	object->AddOut("Out15_1", "TimeSeries", Demux316_Out15_1, NULL, NULL);
+	object->AddOut("Out15_2", "TimeSeries", Demux316_Out15_2, NULL, NULL);
+	object->AddOut("Out15_3", "TimeSeries", Demux316_Out15_3, NULL, NULL);
+	object->AddOut("Out16_1", "TimeSeries", Demux316_Out16_1, NULL, NULL);
+	object->AddOut("Out16_2", "TimeSeries", Demux316_Out16_2, NULL, NULL);
+	object->AddOut("Out16_3", "TimeSeries", Demux316_Out16_3, NULL, NULL);
+	object->AddIn("In1", "TimeSeries", Demux316_In1);
+	object->AddIn("In2", "TimeSeries", Demux316_In2);
+	object->AddIn("In3", "TimeSeries", Demux316_In3);
+    object->AddIn("Next", "Trigger", Demux316_Next);
+	urmanipulatorobjectlist.Append(object);
+    
 	urSoundAtoms_Setup();
 	
 	object = new ursObject("Oct", Oct_Constructor, Oct_Destructor,2,1);
@@ -3356,13 +3543,14 @@ void urs_SetupObjects()
      urmanipulatorobjectlist.Append(object);
      */
 	
-	sampleobject = new ursObject("Sample", Sample_Constructor, Sample_Destructor,5,1);
+	sampleobject = new ursObject("Sample", Sample_Constructor, Sample_Destructor,6,1);
 	sampleobject->AddOut("Out", "TimeSeries", Sample_Tick, Sample_Out, NULL);
 	sampleobject->AddIn("Amp", "Amplitude", Sample_SetAmp);
 	sampleobject->AddIn("Rate", "Rate", Sample_SetRate);
 	sampleobject->AddIn("Pos", "Position", Sample_SetPos);
 	sampleobject->AddIn("Sample", "Sample", Sample_SetSample);
 	sampleobject->AddIn("Loop", "State", Sample_SetLoop);
+    sampleobject->AddIn("Trigger", "Trigger", Sample_Trigger);
     //	urmanipulatorobjectlist[lastmanipulatorobj++] = sampleobject;
 	urmanipulatorobjectlist.Append(sampleobject);
     

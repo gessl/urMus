@@ -1,4 +1,5 @@
-var urMus = {};
+/*
+ var urMus = {};
 urMus.chat = {};
 
 urMus.chat.addUser = function() {
@@ -84,3 +85,4 @@ urMus.chat.init = function() {
 }
 
 urMus.chat.init();
+*/

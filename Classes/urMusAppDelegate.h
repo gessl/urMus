@@ -34,6 +34,7 @@
 //	UIWindow *window2;
 	NSArray *screenModes;
     UIScreen *extScreen;
+    UIViewController *viewController;
 
 //	ExternalDisplayViewController *externalVC;
 //	NSTimer *repeatingTimer;

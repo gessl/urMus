@@ -68,7 +68,7 @@ enum eventIDs { OnDragStart, OnDragStop, OnHide, OnShow, OnTouchDown, OnTouchUp,
 #ifdef SOAR_SUPPORT
     OnSoarOutput,
 #endif
-    OnAccelerate, OnAttitude, OnRotation, OnHeading, OnLocation, OnMicrophone, OnHorizontalScroll, OnVerticalScroll, OnMove, OnPageEntered, OnPageLeft, OnKeyboard, OnKeyboardBackspace,
+    OnAccelerate, OnAttitude, OnRotation, OnHeading, OnLocation, OnMicrophone, OnHorizontalScroll, OnVerticalScroll, OnMove, OnPageEntered, OnPageLeft, OnDragging, OnKeyboard, OnKeyboardBackspace,
     
     EventsCount
 };
@@ -224,7 +224,7 @@ typedef struct urAPI_Region
 		bool isResized;
 		bool isClamped;
 		bool isClipping;
-		
+
 		float cx;
 		float cy;
 		float top;
@@ -252,8 +252,10 @@ typedef struct urAPI_Region
 		lua_Number ofsx;
 		lua_Number ofsy;
 		
-		float lastinputx;
-		float lastinputy;
+		float lastinputx[MAX_FINGERS];
+		float lastinputy[MAX_FINGERS];
+		int lastinputid[MAX_FINGERS];
+		int numinputs;
 		
 		bool update;
 		
@@ -336,6 +338,7 @@ void addChild(urAPI_Region_t *parent, urAPI_Region_t *child);
 void removeChild(urAPI_Region_t *parent, urAPI_Region_t *child);
 bool layout(urAPI_Region_t* region);
 void changeLayout(urAPI_Region_t* region);
+void reanchor(urAPI_Region_t* region);
 
 void ur_GetSoundBuffer(SInt16* buffer, int channel, int size);
 void FreeAllFlowboxes(int patch);
@@ -344,6 +347,9 @@ void ur_Log(const char * str);
 
 const char* getSystemPath();
 const char* getDocumentPath();
+
+void lock_events();
+void unlock_events();
 
 #endif /* __URAPI_H__ */
 

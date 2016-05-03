@@ -279,34 +279,87 @@ show_index(struct mg_connection *conn,
         "Location: %s\r\n\r\n", index_page);
 }
 
-// Runs the given 'code' query string in the lua interpreter. 
-// Totally not safe, but whatever. 
-static void 
+static char *return_data = NULL;
+static bool buffer_returned = false;
+
+static pthread_cond_t eval_buffer_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t return_buffer_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t return_buffer_cond = PTHREAD_COND_INITIALIZER;
+
+static char *eval_buffer = NULL;
+/* if there's an error from evaluating the buffer, put it here */
+static char *err_str = NULL;
+
+static int thread_count =0;
+
+
+
+// Runs the given 'code' query string in the lua interpreter.
+// Totally not safe, but whatever.
+static void
 eval_script(struct mg_connection *conn,
       const struct mg_request_info *request_info,
       void *user_data) 
 {
-  char *code = mg_get_var(conn, "code"), *err_str;
-  if (code) {
-    
-    // thread-safe, blocking eval call
-    err_str = eval_buffer_write(code);
-    if (err_str) {
-        mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\n"
-                  "Content-Type: text/plain\r\n\r\n"
-                  "Lua error: %s", err_str);
-        free(err_str);
-    } else {
-        mg_printf(conn, "HTTP/1.1 200 OK\r\n"
-                  "Content-Type: text/plain\r\n\r\n");        
-    }
+    char *code = mg_get_var(conn, "code"), *err_str;
+    if (code) {
+        
+        // thread-safe, blocking eval call
+        // SANG ADDED return_buffer_mutex to make sure there's only one code thread exists from evaulation to return at any time.
+        bool released_from_the_queue = false;
+        pthread_mutex_lock(&return_buffer_mutex);
+        thread_count ++;
+#ifdef SANGDEBUG
+        printf("0 %d, code:%s\n", thread_count, code);
+#endif
+        bool one_escaped = false;
+        while( thread_count >1 && !released_from_the_queue ){
+            pthread_cond_wait(&return_buffer_cond, &return_buffer_mutex);
+            released_from_the_queue = true;
+        }
+        released_from_the_queue = false;
+#ifdef SANGDEBUG
+        printf("1 %d, passed:%s\n", thread_count, code);
+#endif
+        pthread_mutex_unlock(&return_buffer_mutex);
+        // SANG: only one thread exists from this point 
+        err_str = eval_buffer_write(code);
+        
+        if (err_str) {
+            mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\n"
+                      "Content-Type: text/plain\r\n\r\n"
+                      "Lua error: %s", err_str);
+            free(err_str);
+        } else {
+            if ( return_data ){
+                mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                          "Content-Type: text/xml\r\n\r\n");
+                mg_printf(conn, "<?xml version=\"1.0\" ?>");
+                mg_printf(conn, "%s", return_data);
+            }
+            else
+            {
+                mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                          "Content-Type: text/plain\r\n\r\n"
+                          );
+            }
+            
+        }
+        // let a thread in queue pass the lock above
+        pthread_mutex_lock(&return_buffer_mutex);
+        thread_count--;
+#ifdef SANGDEBUG
+        printf("4 %d passed:%s (%s)\n",thread_count, code, return_data);
+#endif
+        pthread_mutex_unlock(&return_buffer_mutex);
+        pthread_cond_signal(&return_buffer_cond);
 
-    mg_free(code);
-  } else {
-    mg_printf(conn, "HTTP/1.1 400 Bad Request\r\n"
-          "Content-Type: text/plain\r\n\r\n"
-          "Parameter 'code' not specified");  
-  }
+        mg_free(code);
+    } else {
+        mg_printf(conn, "HTTP/1.1 400 Bad Request\r\n"
+                  "Content-Type: text/plain\r\n\r\n"
+                  "Parameter 'code' not specified");
+    }
 }
 
 extern char * ur_GetLog(int since, int *nlog);	// to avoid messing up with objective-c code
@@ -428,13 +481,9 @@ const char* http_ip_port(void)
 }
 
 static pthread_mutex_t eval_buffer_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t eval_buffer_cond = PTHREAD_COND_INITIALIZER;
-static char *eval_buffer = NULL;
-/* if there's an error from evaluating the buffer, put it here */
-static char *err_str = NULL;
 
-char *
-eval_buffer_write(const char *buf)
+
+char *eval_buffer_write(const char *buf)
 {
   char *new_error = NULL;
 
@@ -451,19 +500,75 @@ eval_buffer_write(const char *buf)
   return new_error;
 }
 
+static void stackDump (lua_State *L) {
+    int i;
+    int top = lua_gettop(L);
+    printf("stackDump:\n");
+    for (i = 1; i <= top; i++) {  /* repeat for each level */
+        int t = lua_type(L, i);
+        switch (t) {
+                
+            case LUA_TSTRING:  /* strings */
+                printf("`%s'", lua_tostring(L, i));
+                break;
+                
+            case LUA_TBOOLEAN:  /* booleans */
+                printf(lua_toboolean(L, i) ? "true" : "false");
+                break;
+                
+            case LUA_TNUMBER:  /* numbers */
+                printf("%g", lua_tonumber(L, i));
+                break;
+                
+            default:  /* other values */
+                printf("%s", lua_typename(L, t));
+                break;
+                
+        }
+        printf("  ");  /* put a separator */
+    }
+    printf("\n");  /* end the listing */
+}
+
 void
 eval_buffer_exec(lua_State *lua)
 {
-  pthread_mutex_lock(&eval_buffer_mutex);
-  if (eval_buffer) {
-    /* returns > 0 if error */
-    if (luaL_dostring(lua, eval_buffer)) {
-      replace_str(&err_str, lua_tostring(lua, -1));
-    } else {
-      replace_str(&err_str, NULL);
+    pthread_mutex_lock(&eval_buffer_mutex);
+    
+    if (eval_buffer) {
+
+        /* returns > 0 if error */
+        if (luaL_dostring(lua, eval_buffer)) {
+            replace_str(&err_str
+                        , lua_tostring(lua, -1));
+        } else {
+            
+            replace_str(&err_str, NULL);
+            //  replace_str(&return_data, "test");
+            
+            lua_getglobal(lua, "__urMusReturn");
+            if (!lua_isnil(lua, -1)){
+                //     stackDump(lua);
+                replace_str(&return_data, lua_tostring(lua, -1));
+#ifdef SANGDEBUG
+                printf("return_data : %s\n", return_data);
+#endif
+                lua_pushnil(lua);
+                lua_setglobal(lua, "__urMusReturn");
+                
+                //     stackDump(lua);
+            }
+            else
+                replace_str(&return_data, NULL);
+            
+            lua_pop(lua, 1);
+            
+        }
+#ifdef SANGDEBUG
+        printf("3 %d, passed:%s\n", thread_count, eval_buffer);
+#endif
+        replace_str(&eval_buffer, NULL);
     }
-    replace_str(&eval_buffer, NULL);
-  }
-  pthread_mutex_unlock(&eval_buffer_mutex);
-  pthread_cond_signal(&eval_buffer_cond);
+    pthread_mutex_unlock(&eval_buffer_mutex);
+    pthread_cond_signal(&eval_buffer_cond);
 }

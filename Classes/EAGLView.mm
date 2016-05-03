@@ -17,8 +17,10 @@
 #import "urAPI.h"
 #import "Texture2d.h"
 
+#ifndef UISTRINGS
 #import "urFont.h"
 #include "urTexture.h"
+#endif
 
 #import "MachTimer.h"
 #import "urSound.h"
@@ -89,6 +91,9 @@ GLfloat shadowColors[] = {
 };
 
 // Path to the default font
+
+using namespace std;
+
 string g_fontPath;
 string g_storagePath;
 static string &fontPath=g_fontPath;
@@ -282,15 +287,17 @@ UITouch* UTID2UITouch(int t)
 
 int AddUITouch(UITouch* t)
 {
-	bool found = false;
 	int n = -1;
 	for(int i=0; i< MAX_FINGERS; i++)
 	{
-		if(UITTrans[i] == t) found = true;
+		if(UITTrans[i] == t)
+        {
+            return i;
+        }
 		if(n == -1 && UITTrans[i] == NULL) n = i;
 	}
 	
-	if(found == false && n != -1)
+	if(n != -1)
 		UITTrans[n] = t;
 	
 	return n;
@@ -354,12 +361,19 @@ int FindSingleDragTouch(UITouch* t)
 
 float cursorpositionx[MAX_FINGERS];
 float cursorpositiony[MAX_FINGERS];
+float oldcursorpositionx[MAX_FINGERS];
+float oldcursorpositiony[MAX_FINGERS];
+int cursorpositionid[MAX_FINGERS];
+bool differentialdrag;
 
 float cursorscrollspeedx[MAX_FINGERS];
 float cursorscrollspeedy[MAX_FINGERS];
 
+
+
 // Arrays to pass multi-touch finger to enter/leave handling. This allows smart decisions for enter/leave based on all fingers being considered. Should never be more than 5 and is fixed to avoid problems if MAX_FINGERS should be set to less for some reason.
 int argmoved[MAX_FINGERS];
+int argids[MAX_FINGERS];
 float argcoordx[MAX_FINGERS];
 float argcoordy[MAX_FINGERS];
 float arg2coordx[MAX_FINGERS];
@@ -624,6 +638,23 @@ void decCameraUseBy(int dec)
     NSString *currSysVer = [[UIDevice currentDevice] systemVersion];
     if ([currSysVer compare:reqSysVer options:NSNumericSearch] != NSOrderedAscending)
         displayLinkSupported = TRUE;
+}
+
+- (void)viewDidLoad:(BOOL)animated
+{
+    // IOS 7
+    //viewDidload
+    if ([self respondsToSelector:@selector(setNeedsStatusBarAppearanceUpdate)]) {
+    // iOS 7
+    [self prefersStatusBarHidden];
+    [self performSelector:@selector(setNeedsStatusBarAppearanceUpdate)];
+    } else {
+    // iOS 6
+    // Hide top navigation bar
+            [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationNone];
+    //        [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationSlide];
+        }
+
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -935,7 +966,7 @@ void decCameraUseBy(int dec)
         case GPUIMAGE_VIGNETTE: [(GPUImageVignetteFilter *)inputFilter setVignetteEnd:value]; break;
         case GPUIMAGE_GAUSSIAN: [(GPUImageGaussianBlurFilter *)inputFilter setBlurSize:value]; break;
         case GPUIMAGE_BILATERAL: [(GPUImageBilateralFilter *)inputFilter setBlurSize:value]; break;
-        case GPUIMAGE_FASTBLUR: [(GPUImageFastBlurFilter *)inputFilter setBlurPasses:round(value)]; break;
+//        case GPUIMAGE_FASTBLUR: [(GPUImageFastBlurFilter *)inputFilter setBlurPasses:round(value)]; break;
         case GPUIMAGE_GAUSSIAN_SELECTIVE: [(GPUImageGaussianSelectiveBlurFilter *)inputFilter setExcludeCircleRadius:value]; break;
         case GPUIMAGE_FILTERGROUP: [(GPUImagePixellateFilter *)[(GPUImageFilterGroup *)inputFilter filterAtIndex:1] setFractionalWidthOfAPixel:value]; break;
         case GPUIMAGE_CROP: [(GPUImageCropFilter *)inputFilter setCropRegion:CGRectMake(0.0, 0.0, 1.0, value)]; break;
@@ -1435,6 +1466,12 @@ void decCameraUseBy(int dec)
 }
 #endif
 
+// Post iOS 7.0 to hide statusbar for sure
+- (BOOL)prefersStatusBarHidden
+{
+    return YES;
+}
+
 - (void)awakeFromNib
 {
 	NSString *resourcePath = [[NSBundle mainBundle] resourcePath];
@@ -1447,8 +1484,23 @@ void decCameraUseBy(int dec)
     errorfontPath = "Helvetica";
 #endif
     
-    // Hide top navigation bar
-	[[UIApplication sharedApplication] setStatusBarHidden:YES animated:NO];
+    // IOS 7
+    //viewDidload
+    if ([self respondsToSelector:@selector(setNeedsStatusBarAppearanceUpdate)]) {
+        // iOS 7
+        [self prefersStatusBarHidden];
+        [self performSelector:@selector(setNeedsStatusBarAppearanceUpdate)];
+    } else {
+        // iOS 6
+        // Hide top navigation bar
+        [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationNone];
+        //        [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationSlide];
+    }
+    
+    
+
+    
+//	[[UIApplication sharedApplication] setStatusBarHidden:YES animated:NO];
 	// To notes here: First I also added this to info.plist to make it vanish faster, which just looks nicer.
 	// More importantly there is a bug with the statusbar still intercepting when hidden.
 	// For that purpose I enabled landscapemode in info.plist. This seems to remove the problem and has no negative side-effect I could find.
@@ -1524,28 +1576,35 @@ void decCameraUseBy(int dec)
 	self.locationManager = [[[CLLocationManager alloc] init] autorelease];
 	
 	// check if the hardware has a compass
-	if (locationManager.headingAvailable == NO) {
+	if ([[locationManager class] headingAvailable] == NO) { // Fixed for post ios 4.0
 		// No compass is available. This application cannot function without a compass, 
         // so a dialog will be displayed and no magnetic data will be measured.
-        self.locationManager = nil;
+ //       self.locationManager = nil;
 		// Disable compass flowboxes in this case. TODO
 	} else {
-		// location service configuration
-		locationManager.distanceFilter = kCLDistanceFilterNone; 
-		locationManager.desiredAccuracy = kCLLocationAccuracyBest;
-		// start the GPS
-		[locationManager startUpdatingLocation];
-
         // heading service configuration
         locationManager.headingFilter = kCLHeadingFilterNone;
         
+        
         // setup delegate callbacks
         locationManager.delegate = self;
-        
         // start the compass
         [locationManager startUpdatingHeading];
 		
     }
+    // We got location service?
+    if([[locationManager class] locationServicesEnabled]==YES)
+    {
+        // location service configuration
+        locationManager.distanceFilter = kCLDistanceFilterNone;
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest;
+        // setup delegate callbacks
+        locationManager.delegate = self;
+        // start the GPS
+        [locationManager startUpdatingLocation];
+    }
+    
+
     
     if ([UIImagePickerController isSourceTypeAvailable: UIImagePickerControllerSourceTypeCamera])
         // Has camera
@@ -1655,6 +1714,7 @@ static bool cameraBeingUsedAsBrush = false;
 	callAllCompassSources(heading_x, heading_y, heading_z, heading_north);
 }
 
+// TODO depricated with 6.0 gessl NYI
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)oldLocation {
 	CLLocationDegrees  latitude = newLocation.coordinate.latitude;
 	CLLocationDegrees longitude = newLocation.coordinate.longitude;
@@ -2177,11 +2237,15 @@ static EAGLSharegroup* theSharegroup = nil;
 // Hard-wired screen dimension constants. This will soon be system-dependent variable!
 int SCREEN_WIDTH = 320;
 int SCREEN_HEIGHT = 480;
+int TOUCH_SCREEN_WIDTH = 320; // To handle oriented touch
+int TOUCH_SCREEN_HEIGHT = 480;
 int HALF_SCREEN_WIDTH = 160;
 int HALF_SCREEN_HEIGHT = 240;
 
 int EXT_SCREEN_WIDTH = 320;
 int EXT_SCREEN_HEIGHT = 480;
+
+bool portrait = true;
 
 //#define SCREEN_WIDTH 320
 //#define SCREEN_HEIGHT 480
@@ -4166,7 +4230,7 @@ void renderTextLabel(urAPI_Region_t* t)
 	{
 	// eval http buffer
 		eval_buffer_exec(lua);
-  
+        
 		urs_PullVis(); // update vis data before we call events, this way we have a rate based pulling that is available in all events.
 		// Clock ourselves.
 		elapsedtime = mytimer->elapsedSec();
@@ -4194,7 +4258,18 @@ void renderTextLabel(urAPI_Region_t* t)
 //	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glBindFramebufferOES(GL_FRAMEBUFFER_OES, viewFramebuffer);
     glViewport(0, 0, backingWidth, backingHeight);
-
+/*
+    if (portrait)
+        glViewport(0, 0, backingWidth, backingHeight);
+    else
+    {
+        glViewport(0, 0, backingHeight, backingWidth);
+    }
+    if (!portrait) {
+        glTranslatef(160.0f, 240.0f, 0.0f);
+        glRotatef(90.0, 0.0, 0.0, 1.0);
+    }
+    */
 #ifdef RENDERTOTEXTURE
     if(bgtextureFrameBuffer == -1)
         glGenFramebuffersOES(1, &bgtextureFrameBuffer);
@@ -4679,7 +4754,7 @@ void renderTextLabel(urAPI_Region_t* t)
 						[t->texture->backgroundTex drawInRect:CGRectMake(t->left,t->bottom,t->width,t->height)];
 					}
                     
-                    /*
+
                     if(t->texture->isTiled)
                     {
                         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -4699,7 +4774,7 @@ void renderTextLabel(urAPI_Region_t* t)
                         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
                     }
-                    */
+
 					glEnable(GL_BLEND);
                     err = glGetError();
                     if(err != GL_NO_ERROR)
@@ -5147,8 +5222,30 @@ void renderTextLabel(urAPI_Region_t* t)
     [self drawView];
   
 }
+/*
+- (void) movingToBackground: (NSNotification *) notification {
+    [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
+}
 
+- (void) movingToForeground: (NSNotification *) notification {
+    [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+}
 
+- (void)viewChanging:(NSNotification*)notification
+{
+    NSLog(@"View is changing");
+    previousOrientation = orientation;
+    orientation = [[UIDevice currentDevice] orientation];
+    
+    if (previousOrientation==orientation && forceReorientation==NO) {
+        return;
+    }
+}
+
+- (BOOL) shouldAutorotate {
+    return NO;
+}
+*/
 - (BOOL)createFramebuffer {
 	CGRect screendimensions = [[UIScreen mainScreen] bounds];
 //	CGRect screendimensions = [self bounds];
@@ -5157,6 +5254,8 @@ void renderTextLabel(urAPI_Region_t* t)
     {
 	SCREEN_WIDTH = screendimensions.size.width;
 	SCREEN_HEIGHT = screendimensions.size.height;
+    TOUCH_SCREEN_WIDTH = SCREEN_WIDTH;
+    TOUCH_SCREEN_HEIGHT = SCREEN_HEIGHT;
 	HALF_SCREEN_WIDTH = SCREEN_WIDTH/2;
 	HALF_SCREEN_HEIGHT = SCREEN_HEIGHT/2;
     }
@@ -5289,6 +5388,8 @@ void renderTextLabel(urAPI_Region_t* t)
 //        SCREEN_HEIGHT = self.frame.size.height;
         SCREEN_WIDTH = screendimensions.size.width;
         SCREEN_HEIGHT = screendimensions.size.height;
+        TOUCH_SCREEN_WIDTH = SCREEN_WIDTH;
+        TOUCH_SCREEN_HEIGHT = SCREEN_HEIGHT;
         HALF_SCREEN_WIDTH = SCREEN_WIDTH/2;
         HALF_SCREEN_HEIGHT = SCREEN_HEIGHT/2;
     }
@@ -5631,20 +5732,36 @@ int NumHitMatches(urAPI_Region_t* hitregion[], int max, int idx, int repeat)
 
 urAPI_Region_t* hitregion[MAX_FINGERS];
 
-void onTouchDownParse(int t, int numTaps, float posx, float posy)
+void onTouchDownParse(int t, int numTaps, float posx, float posy, int id)
 {
-	if(t>=0)
+//	if(t>=0)
 	{
+        t = id; // GE
+        
 		hitregion[t] = NULL;
 		cursorpositionx[t] = posx;
 		cursorpositiony[t] = posy;
 		
-		hitregion[t] = findRegionHit(posx, SCREEN_HEIGHT-posy);
+		hitregion[t] = findRegionHit(posx, TOUCH_SCREEN_HEIGHT-posy);
 		if(hitregion[t]!=nil)
 		{
-			float x = hitregion[t]->lastinputx;
-			float y = hitregion[t]->lastinputy;
+			float x = posx - hitregion[t]->left;
+			float y = (TOUCH_SCREEN_HEIGHT - posy) - hitregion[t]->bottom;
+            //			assert(hitregion[t]->numinputs< MAX_FINGERS);
+			if(hitregion[t]->numinputs< MAX_FINGERS && findInputPointIndex(hitregion[t], id)==-1)
+			{
+                hitregion[t]->lastinputx[hitregion[t]->numinputs] = x;  // Input coordinates are relative to bottom left of region
+                hitregion[t]->lastinputy[hitregion[t]->numinputs] = y;
+                hitregion[t]->lastinputid[hitregion[t]->numinputs] = id;
+                hitregion[t]->numinputs++;
+  //              LOGI("added touch: %p %d %d %d %f %f",hitregion[t], t, id, hitregion[t]->numinputs,posx,posy);
+			}
+//			else if(hitregion[t]->numinputs >= MAX_FINGERS)
+//				LOGI("OUCHIEOUCH");
+            
+            //			LOGI("x: %f y: %f", x,y);
 			// A double tap.
+            lock_events();
 			if (numTaps == 2 && hitregion[t]->OnEvents[OnDoubleTap]) 
 			{
 				callScript(OnDoubleTap,hitregion[t]->OnEvents[OnDoubleTap], hitregion[t]);
@@ -5660,6 +5777,7 @@ void onTouchDownParse(int t, int numTaps, float posx, float posy)
 				callScriptWith2Args(OnTouchDown,hitregion[t]->OnEvents[OnTouchDown], hitregion[t],x,y);
 //				callScriptWith2Args(OnTouchDown,hitregion[t]->OnTouchUp, hitregion[t],x,y); // GESSL: Double Tap issue.
 			}
+            unlock_events();
 		}
 	}
 }
@@ -5670,38 +5788,126 @@ void onTouchArgInit()
 	arg = 0;
 }
 
-void onTouchMoveUpdate(int t, int t2, float oposx, float oposy, float posx, float posy)
+void onTouchMoveUpdate(int t, int t2, float oposx, float oposy, float posx, float posy, int id)
 {
-	if(t2 >=0)
+//	if(t2 >=0)
 	{
 		cursorscrollspeedx[t2] = posx - oposx;
 		cursorscrollspeedy[t2] = posy - oposy;
-		cursorpositionx[t2] = posx;
-		cursorpositiony[t2] = posy;
+		cursorpositionx[t2] = (int)posx;
+		cursorpositiony[t2] = (int)posy;
+		cursorpositionid[t2] = id;
+		oldcursorpositionx[t2] = (int)oposx;
+		oldcursorpositiony[t2] = (int)oposy;
+		differentialdrag = false;
 		argmoved[arg] = t;
+        argids[arg] = id;
 		argcoordx[arg] = posx;
-		argcoordy[arg] = SCREEN_HEIGHT-posy;
+		argcoordy[arg] = TOUCH_SCREEN_HEIGHT-posy;
 		arg2coordx[arg] = oposx;
-		arg2coordy[arg] = SCREEN_HEIGHT-oposy;
+		arg2coordy[arg] = TOUCH_SCREEN_HEIGHT-oposy;
 		arg++;
 	}
 }
 
-void onTouchEnds(int numTaps, float oposx, float oposy, float posx, float posy)
+int findInputPointIndex(urAPI_Region_t* t, int id)
 {
-	urAPI_Region_t* hitregion = findRegionHit(posx, SCREEN_HEIGHT-posy);
+	for(int i=0; i < t->numinputs; i++)
+	{
+		if(t->lastinputid[i] == id)
+		{
+            //			LOGI("FIP: %p %i",t, i);
+			return i;
+		}
+        //		LOGI("FI: %p %d != %d", t, t->lastinputid[i], id);
+	}
+//	LOGI("FPI: %p NONE %d",t, t->numinputs);
+	return -1;
+}
+
+void removeInputPoint(urAPI_Region_t* t, int id)
+{
+	int idx = findInputPointIndex(t,id);
+	if(idx !=-1)
+	{
+//		LOGI("RemoveInput: %d %d %d %d %f %f", id, idx, t->lastinputid[idx], t->numinputs, t->lastinputx[idx], t->lastinputy[idx]);
+        
+		for(int i = idx+1; i < t->numinputs; i++)
+		{
+			t->lastinputid[i-1] = t->lastinputid[i];
+			t->lastinputx[i-1] = t->lastinputx[i];
+			t->lastinputy[i-1] = t->lastinputy[i];
+            //			LOGI("!");
+		}
+		t->numinputs = t->numinputs-1;
+	}
+}
+
+bool findInputPointById(urAPI_Region_t* t, int id, float &x, float &y)
+{
+	int i = findInputPointIndex(t, id);
+	if(i == -1)
+		return false; // None found
+	else
+	{
+        x = t->lastinputx[i];
+        y = t->lastinputy[i];
+        return true;
+	}
+    
+}
+
+void adjustInputXOffsetById(urAPI_Region_t* t, int id, float x)
+{
+	int i = findInputPointIndex(t, id);
+	if(i == -1)
+		return; // None found
+	else
+	{
+		t->lastinputx[i] = x;
+	}
+}
+
+void adjustInputYOffsetById(urAPI_Region_t* t, int id, float y)
+{
+	int i = findInputPointIndex(t, id);
+	if(i == -1)
+		return; // None found
+	else
+	{
+		t->lastinputy[i] = y;
+	}
+}
+
+void onTouchEnds(int numTaps, float oposx, float oposy, float posx, float posy, int id)
+{
+	urAPI_Region_t* hitregion = findRegionHit(posx, TOUCH_SCREEN_HEIGHT-posy);
 	if(hitregion /* && numTaps <= 1 */) // GESSL: Double tab issue
 	{
-		callScriptWith2Args(OnTouchUp,hitregion->OnEvents[OnTouchUp], hitregion,hitregion->lastinputx,hitregion->lastinputy);
-		//		callAllOnLeaveRegions(posx, SCREEN_HEIGHT-posy); // GESSL: Double tab issue
+		float x,y;
+        lock_events();
+		if(findInputPointById(hitregion, id, x, y))
+		{
+            callScriptWith2Args(OnTouchUp, hitregion->OnEvents[OnTouchUp],
+                                hitregion, x, y);
+            //				hitregion, hitregion->lastinputx, hitregion->lastinputy);
+            //		callAllOnLeaveRegions(posx, TOUCH_SCREEN_HEIGHT-posy); // GESSL: Double tab issue
+			removeInputPoint(hitregion, id);
+		}
+        //		else
+		else
+			callScriptWith2Args(OnTouchUp, hitregion->OnEvents[OnTouchUp],
+                                hitregion, posx-hitregion->left, posy-hitregion->bottom);
+        
+        unlock_events();
 
 	}
 	else
 	{
 		argcoordx[arg] = posx;
-		argcoordy[arg] = SCREEN_HEIGHT-posy;
+		argcoordy[arg] = TOUCH_SCREEN_HEIGHT-posy;
 		arg2coordx[arg] = oposx;
-		arg2coordy[arg] = SCREEN_HEIGHT-oposy;
+		arg2coordy[arg] = TOUCH_SCREEN_HEIGHT-oposy;
 		arg++;
 	}
 }
@@ -5736,44 +5942,194 @@ void ClampRegion(urAPI_Region_t*region)
         region->ofsy = region->ofsy - dy; // adjust anchor
         region->bottom = (region->clampbottom + region->clampheight)-region->height;
     }
-//    if(region->ofsx+region->width > SCREEN_WIDTH) region->ofsx = SCREEN_WIDTH-region->width;;
-//    if(region->ofsy+region->height > SCREEN_HEIGHT) region->ofsy = SCREEN_HEIGHT-region->height;
+//    if(region->ofsx+region->width > TOUCH_SCREEN_WIDTH) region->ofsx = TOUCH_SCREEN_WIDTH-region->width;;
+//    if(region->ofsy+region->height > TOUCH_SCREEN_HEIGHT) region->ofsy = TOUCH_SCREEN_HEIGHT-region->height;
 }
 
 
 void onTouchDoubleDragUpdate(int t, int dragidx, float pos1x, float pos1y, float pos2x, float pos2y)
 {
-	if(t>=0)
+//	if(t>=0)
 	{
 		float dx = cursorscrollspeedx[t];
 		float dy = -(cursorscrollspeedy[t]);
-		if( dx !=0 || dy != 0)
+//		if( dx !=0.0 || dy != 0.0)
 		{
             urAPI_Region_t* dragregion = dragtouches[dragidx].dragregion;
             if(dragregion->isMovable)
             {
-                dragregion->left += dx;
-                dragregion->bottom += dy;
-                float cursorpositionx2 = pos2x;
-                float cursorpositiony2 = pos2y;
-                if(dragregion->isResizable)
-                {
-                    float deltanewwidth = fabs(cursorpositionx2-pos1x);
-                    float deltanewheight = fabs(cursorpositiony2-pos1y);
-                    float width = dragtouches[dragidx].dragwidth + deltanewwidth;
-                    float height = dragtouches[dragidx].dragheight + deltanewheight;
-                    if(dragregion->textlabel!=NULL && (width != dragregion->width || height != dragregion->height))
-                        dragregion->textlabel->updatestring = true;
-
-                    dragregion->width = width;
-                    dragregion->height = height;
+                if(differentialdrag)
+				{
+                    
+                    dragregion->left += dx;
+                    dragregion->bottom += dy;
+                    float cursorpositionx2 = pos2x;
+                    float cursorpositiony2 = pos2y;
+                    if(dragregion->isResizable)
+                    {
+                        float deltanewwidth = fabs(cursorpositionx2-pos1x);
+                        float deltanewheight = fabs(cursorpositiony2-pos1y);
+                        float width = dragtouches[dragidx].dragwidth + deltanewwidth;
+                        float height = dragtouches[dragidx].dragheight + deltanewheight;
+                        if(dragregion->textlabel!=NULL && (width != dragregion->width || height != dragregion->height))
+                            dragregion->textlabel->updatestring = true;
+                        
+                        dragregion->width = width;
+                        dragregion->height = height;
+                    }
+                    dragregion->right = dragregion->left + dragregion->width;
+                    dragregion->top = dragregion->bottom + dragregion->height;
+                    dragregion->ofsx += dx;
+                    dragregion->ofsy += dy;
                 }
-                dragregion->right = dragregion->left + dragregion->width;
-                dragregion->top = dragregion->bottom + dragregion->height;
-                dragregion->ofsx += dx;
-                dragregion->ofsy += dy;
+                else
+                {
+                    float x,y;
+                    //					if(findInputPointById(dragregion, cursorpositionid[t], x, y))
+//                    if(cursorpositionid[t] != dragtouches[dragidx].touch1)
+                        //                    LOGI("YELP %p %d != %d %d",dragregion,cursorpositionid[t],dragtouches[dragidx].touch1, dragtouches[dragidx].touch2);
+                        //					if(findInputPointById(dragregion, cursorpositionid[t], x, y))
+                        if(findInputPointById(dragregion, dragtouches[dragidx].touch1, x, y))
+                        {
+                            //                    LOGI("DD1 %p %f %f %d %d %d", dragregion, x,y, dragtouches[dragidx].touch1, dragtouches[dragidx].touch2, dragtouches[dragidx].touch1);
+                            //						float left1 = cursorpositionx[t] - (dragregion->left-x);
+                            float bottom1 = (TOUCH_SCREEN_HEIGHT-pos1y) - y;
+                            //						float bottom1 = (TOUCH_SCREEN_HEIGHT-cursorpositiony[t]) - y;
+                            //						dragregion->left = cursorpositionx[t] - x;
+                            //						dragregion->bottom = (TOUCH_SCREEN_HEIGHT-cursorpositiony[t]) - y;
+                            if (dragregion->isResizable) {
+                                float x2,y2;
+                                if(findInputPointById(dragregion, dragtouches[dragidx].touch2, x2, y2))
+                                {
+                                    //                            LOGI("DD2 %p %f %f", dragregion, x2,y2);
+                                    //							float left2 = pos2x - (dragregion->left+x2);
+                                    float bottom2 = (TOUCH_SCREEN_HEIGHT-pos2y) - y2;
+                                    
+                                    float width = 0.0;
+                                    float height = 0.0;
+                                    
+                                    float fwidth = pos2x - pos1x;
+                                    float fheight = pos1y - pos2y;
+                                    
+                                    float right1 = dragregion->width-x;
+                                    float right2 = dragregion->width-x2;
+                                    float top1 = dragregion->height-y;
+                                    float top2 = dragregion->height-y2;
+                                    
+                                    if (x2 > x)
+                                    {
+                                        if(fwidth >= 0)
+                                        {
+                                            width = fwidth + x + right2;
+                                            adjustInputXOffsetById(dragregion, dragtouches[dragidx].touch2, width-right2);
+                                            //										dragregion->left = cursorpositionx[t] - x;
+                                            dragregion->left = pos1x - x;
+                                        }
+                                        else // Finger crossover in X
+                                        {
+                                            width = -fwidth + x2 + right1;
+                                            adjustInputXOffsetById(dragregion, dragtouches[dragidx].touch1, width-right1);
+                                            //										adjustInputXOffsetById(dragregion, cursorpositionid[t], width-right1);
+                                            dragregion->left = pos2x - x2;
+                                        }
+                                        
+                                        //									LOGI("1: width: %f %f %f %f %f %f %f", width, x,  x2, pos1x, pos2x, x+fwidth, (dragregion->width-x2));
+                                    }
+                                    else
+                                    {
+                                        if(fwidth <= 0)
+                                        {
+                                            width = -fwidth + x2 + right1;
+                                            //										adjustInputXOffsetById(dragregion, cursorpositionid[t], width-right1);
+                                            adjustInputXOffsetById(dragregion, dragtouches[dragidx].touch1, width-right1);
+                                            dragregion->left = pos2x - x2;
+                                        }
+                                        else // Finger crossover in Y
+                                        {
+                                            width = fwidth + x + right2;
+                                            adjustInputXOffsetById(dragregion, dragtouches[dragidx].touch2, width-right2);
+                                            //										dragregion->left = cursorpositionx[t] - x;
+                                            dragregion->left = pos1x - x;
+                                        }
+                                        //									LOGI("2: width: %f %f %f %f %f %f %f", width, x,  x2, pos1x, pos2x, x+fwidth, (dragregion->width-x));
+                                        
+                                    }
+                                    
+                                    if( y2 > y)
+                                    {
+                                        if(fheight >= 0)
+                                        {
+                                            height = fheight + y + top2;
+                                            adjustInputYOffsetById(dragregion, dragtouches[dragidx].touch2, height - top2);
+                                            //										dragregion->bottom = (TOUCH_SCREEN_HEIGHT-cursorpositiony[t]) - y;
+                                            dragregion->bottom = (TOUCH_SCREEN_HEIGHT-pos1y) - y;
+                                        }
+                                        else // Finger crossover in Y
+                                        {
+                                            height = -fheight + y2 + top1;
+                                            //										adjustInputYOffsetById(dragregion, cursorpositionid[t], height - top1);
+                                            adjustInputYOffsetById(dragregion, dragtouches[dragidx].touch1, height - top1);
+                                            dragregion->bottom = (TOUCH_SCREEN_HEIGHT-pos2y) - y2;
+                                            
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if(fheight <= 0)
+                                        {
+                                            height = -fheight + y2 + top1;
+                                            //										adjustInputYOffsetById(dragregion, cursorpositionid[t], height-top1);
+                                            adjustInputYOffsetById(dragregion, dragtouches[dragidx].touch1, height-top1);
+                                            dragregion->bottom = (TOUCH_SCREEN_HEIGHT-pos2y) - y2;
+                                        }
+                                        else // Finger crossover in Y
+                                        {
+                                            height = fheight + y + top2;
+                                            adjustInputYOffsetById(dragregion, dragtouches[dragidx].touch2, height - top2);
+                                            //										dragregion->bottom = (TOUCH_SCREEN_HEIGHT-cursorpositiony[t]) - y;
+                                            dragregion->bottom = (TOUCH_SCREEN_HEIGHT-pos1y) - y;
+                                        }
+                                    }
+                                    if (dragregion->textlabel != NULL
+                                        && (width != dragregion->width
+                                            || height != dragregion->height))
+                                        dragregion->textlabel->updatestring = true;
+
+                                    dragregion->width = width;
+                                    dragregion->height = height;
+                                    //								LOGI("Dragging D %d %f %f %f %f %f %f %f %f %f %f", dragidx, x,x2,y,y2,left1, left2, bottom1, bottom2, width,height);
+                                }
+                                else
+                                {
+                                    float deltanewwidth = fabs(pos2x - pos1x) /* * xscale*/;
+                                    float deltanewheight = fabs(pos2y - pos1y) /* * yscale*/;
+                                    float width = dragtouches[dragidx].dragwidth
+                                    + deltanewwidth;
+                                    float height = dragtouches[dragidx].dragheight
+                                    + deltanewheight;
+                                    if (dragregion->textlabel != NULL
+                                        && (width != dragregion->width
+                                            || height != dragregion->height))
+                                        dragregion->textlabel->updatestring = true;
+                                    
+                                    dragregion->width = width;
+                                    dragregion->height = height;
+                                }
+                            }
+                            dragregion->right = dragregion->left+dragregion->width;
+                            dragregion->top = dragregion->bottom+dragregion->height;
+                            dragregion->cx = dragregion->left + dragregion->width / 2;
+                            dragregion->cy = dragregion->bottom + dragregion->height / 2;
+                            reanchor(dragregion); // Fix up anchor offset from screen coordinates
+                        }
+//                        else
+//                            LOGI("NO DD ID FOUND %f %f %d %d %d",x,y, dragtouches[dragidx].touch1, dragtouches[dragidx].touch2, dragtouches[dragidx].touch1);
+                    
+                }
+                
                 if(dragregion->isClamped) ClampRegion(dragregion);
                 changeLayout(dragregion);
+                callScriptWith5Args(OnDragging,dragregion->OnEvents[OnDragging], dragregion, dragregion->cx,dragregion->cy, dx, dy,t+1);
             }
             if(dragregion->isResizable)
                 callScriptWith4Args(OnSizeChanged,dragregion->OnEvents[OnSizeChanged], dragregion, pos1x,pos1y,pos2x,pos2y);
@@ -5791,16 +6147,33 @@ bool testDoubleDragStart(int t1, int t2)
 
 void doTouchDoubleDragStart(int t1,int t2,int touch1, int touch2)
 {
-	if(t1>=0 && t2>=0)
+    //	if (t1 >= 0 && t2 >= 0) { GE
 	{
+		t1 = touch1;
+		t2 = touch2;
 		hitregion[t1]->isDragged = true; // YAYA
 		hitregion[t1]->isResized = true;
-		int dragidx = FindAvailableDragTouch();
+		int dragidx = FindSingleDragTouch(touch1);
+		int dragidx2 = FindSingleDragTouch(touch2);
+        //		int dragidx = touch1;
+        //		int dragidx2 = touch2;
+        
+		if(dragidx == -1)
+		{
+			dragidx = dragidx2;
+			dragidx2 = -1;
+		}
+		if(dragidx == -1 && dragidx2 == -1)
+			dragidx = FindAvailableDragTouch();
+//		else
+//			LOGI("FOUND EXISTING DRAG: %d", dragidx);
+        
 		dragtouches[dragidx].dragregion = hitregion[t1];
+//		LOGI("SDDS: %p %d %d %d %d %d %d", hitregion[t1], t1, t2, dragidx, dragidx2, touch1, touch2);
 		dragtouches[dragidx].touch1 = touch1; //UITouch2UTID([[touches allObjects] objectAtIndex:t1]);
 		dragtouches[dragidx].touch2 = touch2; //UITouch2UTID([[touches allObjects] objectAtIndex:t2]);
-		dragtouches[dragidx].dragwidth = hitregion[t1]->width-fabs(cursorpositionx[t2]-cursorpositionx[t1]);
-		dragtouches[dragidx].dragheight = hitregion[t1]->height-fabs(cursorpositiony[t2]-cursorpositiony[t1]);
+		dragtouches[dragidx].dragwidth = hitregion[t1]->width - fabs(cursorpositionx[t2] - cursorpositionx[t1]);
+		dragtouches[dragidx].dragheight = hitregion[t1]->height - fabs(cursorpositiony[t2] - cursorpositiony[t1]);
 		dragtouches[dragidx].active = true;
 	}
 }
@@ -5813,36 +6186,50 @@ bool testSingleDragStart(int t)
 		return false;
 }
 
-bool getSingleDoubleTouchConversionID(int t)
+int getSingleDoubleTouchConversionID(int t)
 {
 	int dragidx = FindDragRegion(hitregion[t]);
-	if(dragidx == -1)
+	if (dragidx == -1)
 		return -1;
-	else 
-		return dragtouches[dragidx].touch1;
+	else
+		if(dragtouches[dragidx].touch1 != -1)
+			return dragtouches[dragidx].touch1;
+		else
+			return dragtouches[dragidx].touch2;
+}
+
+void ComputeDragWidth(int dragidx, float pos1x, float pos1y,
+                      float pos2x, float pos2y) {
+	if (dragtouches[dragidx].touch1 != -1 && dragtouches[dragidx].touch2 != -1) {
+		dragtouches[dragidx].dragwidth =
+		dragtouches[dragidx].dragregion->width
+		- fabs(pos2x - pos1x);
+		dragtouches[dragidx].dragheight =
+		dragtouches[dragidx].dragregion->height
+		- fabs(pos2y - pos1y);
+	}
 }
 
 void doTouchSingleDragStart(int t, int touch1, float pos1x, float pos1y, float pos2x, float pos2y)
 {
-	hitregion[t]->isDragged = true; // YAYA
-	int dragidx = FindDragRegion(hitregion[t]);
-	if(dragidx == -1)
-	{
-		dragidx = FindAvailableDragTouch();
-		dragtouches[dragidx].dragregion = hitregion[t];
-		dragtouches[dragidx].touch1 = touch1;
-		dragtouches[dragidx].touch2 = -1;
-		dragtouches[dragidx].active = true;
-	}
-	else
-	{
-		AddDragRegion(dragidx,touch1);
-		if(dragtouches[dragidx].touch2 != -1)
-		{
-			dragtouches[dragidx].dragwidth = dragtouches[dragidx].dragregion->width-fabs(pos2x-pos1x);
-			dragtouches[dragidx].dragheight = dragtouches[dragidx].dragregion->height-fabs(pos2y-pos1y);
-		}
-	}
+//	TestAllDragFlags("SDS");
+        // GE
+        t = touch1;
+        hitregion[t]->isDragged = true; // YAYA
+        int dragidx = FindDragRegion(hitregion[t]);
+        if (dragidx == -1) {
+            dragidx = FindAvailableDragTouch();
+            dragtouches[dragidx].dragregion = hitregion[t];
+            dragtouches[dragidx].touch1 = touch1;
+            dragtouches[dragidx].touch2 = -1;
+            dragtouches[dragidx].active = true;
+            // Equivalent to OnTouchDown when dragging is enabled
+            //            callScript(OnDragStart,dragtouches[dragidx].dragregion->OnEvents[OnDragStart], dragtouches[dragidx].dragregion);
+        } else {
+            AddDragRegion(dragidx, touch1);
+            ComputeDragWidth(dragidx, pos1x, pos1y,
+                             pos2x, pos2y);
+        }
 }
 
 void onTouchSingleDragUpdate(int t, int dragidx)
@@ -5851,18 +6238,62 @@ void onTouchSingleDragUpdate(int t, int dragidx)
 	{
 		float dx = cursorscrollspeedx[t];
 		float dy = -(cursorscrollspeedy[t]);
-		if( dx !=0 || dy != 0)
+		if( dx !=0.0 || dy != 0.0)
 		{
 			urAPI_Region_t* dragregion = dragtouches[dragidx].dragregion;
             if(dragregion->isMovable)
             {
-                dragregion->left += dx;
-                dragregion->bottom += dy;
-                dragregion->right += dx;
-                dragregion->top += dy;
-                dragregion->ofsx += dx;
-                dragregion->ofsy += dy;
+                float offsx = dragregion->ofsx - oldcursorpositionx[t];
+                float offsy = dragregion->ofsy - (TOUCH_SCREEN_HEIGHT - oldcursorpositiony[t]);
+                float offleft = dragregion->left - oldcursorpositionx[t];
+                float offbottom = dragregion->bottom - (TOUCH_SCREEN_HEIGHT - oldcursorpositiony[t]);
+                
+                if(differentialdrag)
+				{
+					dragregion->left = cursorpositionx[t] + offleft;
+					dragregion->bottom = (TOUCH_SCREEN_HEIGHT-cursorpositiony[t]) + offbottom;
+					dragregion->right = dragregion->left+dragregion->width;
+					dragregion->top = dragregion->bottom+dragregion->height;
+                    //					dragregion->right += dx;
+                    //					dragregion->top += dy;
+                    //					dragregion->ofsx += dx;//*0.85;
+                    //					dragregion->ofsy += dy;//*0.85;
+                    dragregion->ofsx = cursorpositionx[t]+offsx;
+                    dragregion->ofsy = (TOUCH_SCREEN_HEIGHT-cursorpositiony[t])+offsy;
+                    dragregion->ofsx = cursorpositionx[t];
+                    dragregion->ofsy = (TOUCH_SCREEN_HEIGHT-cursorpositiony[t]);
+				}
+				else
+				{
+					float x,y;
+					if(findInputPointById(dragregion, cursorpositionid[t], x, y))
+					{
+                        //						dragregion->left = cursorpositionx[t] - (dragregion->left + x);
+                        //						dragregion->bottom = cursorpositiony[t] - (dragregion->bottom + y);
+                        //						dragregion->right = 0;
+                        //						dragregion->top = 0;
+                        //						LOGI("SD: %f %f", x, y);
+						dragregion->left = cursorpositionx[t] - x;
+						dragregion->bottom = (TOUCH_SCREEN_HEIGHT-cursorpositiony[t]) - y;
+						dragregion->right = dragregion->left+dragregion->width;
+						dragregion->top = dragregion->bottom+dragregion->height;
+						dragregion->cx = dragregion->left + dragregion->width / 2;
+						dragregion->cy = dragregion->bottom + dragregion->height / 2;
+						reanchor(dragregion); // Fix up anchor offset from screen coordinates
+					}
+					else // Old school scrolling 
+					{
+                        //					dragregion->left += dx;
+                        //					dragregion->bottom += dy;
+                        //					dragregion->right += dx;
+                        //					dragregion->top += dy;
+                        dragregion->ofsx += dx;
+                        dragregion->ofsy += dy;
+					}
+				}
+
                 changeLayout(dragregion);
+                callScriptWith5Args(OnDragging,dragregion->OnEvents[OnDragging], dragregion, dragregion->cx,dragregion->cy, dx, dy,t+1);
             }
 		}
 	}
@@ -5870,24 +6301,24 @@ void onTouchSingleDragUpdate(int t, int dragidx)
 
 void onTouchScrollUpdate(int t)
 {
-	urAPI_Region_t* scrollregion = findRegionXScrolled(cursorpositionx[t],SCREEN_HEIGHT-cursorpositiony[t],cursorscrollspeedx[t]);
+	urAPI_Region_t* scrollregion = findRegionXScrolled(cursorpositionx[t],TOUCH_SCREEN_HEIGHT-cursorpositiony[t],cursorscrollspeedx[t]);
 	if(scrollregion != nil)
 	{
 		callScriptWith1Args(OnHorizontalScroll,scrollregion->OnEvents[OnHorizontalScroll], scrollregion, cursorscrollspeedx[t]);
 	}
 
-	scrollregion = findRegionYScrolled(cursorpositionx[t],SCREEN_HEIGHT-cursorpositiony[t],-cursorscrollspeedy[t]);
+	scrollregion = findRegionYScrolled(cursorpositionx[t],TOUCH_SCREEN_HEIGHT-cursorpositiony[t],-cursorscrollspeedy[t]);
 	if(scrollregion != nil)
 	{
 		callScriptWith1Args(OnVerticalScroll,scrollregion->OnEvents[OnVerticalScroll], scrollregion, -cursorscrollspeedy[t]);
 	}
 
-	scrollregion = findRegionMoved(cursorpositionx[t],SCREEN_HEIGHT-cursorpositiony[t],cursorscrollspeedx[t],-cursorscrollspeedy[t]);
+	scrollregion = findRegionMoved(cursorpositionx[t],TOUCH_SCREEN_HEIGHT-cursorpositiony[t],cursorscrollspeedx[t],-cursorscrollspeedy[t]);
 	
 	if(scrollregion != nil)
 	{
         
-		callScriptWith5Args(OnMove,scrollregion->OnEvents[OnMove], scrollregion, cursorpositionx[t]-scrollregion->left-cursorscrollspeedx[t],SCREEN_HEIGHT-cursorpositiony[t]-scrollregion->bottom+cursorscrollspeedy[t], cursorscrollspeedx[t], -cursorscrollspeedy[t],t+1);
+		callScriptWith5Args(OnMove,scrollregion->OnEvents[OnMove], scrollregion, cursorpositionx[t]-scrollregion->left-cursorscrollspeedx[t],TOUCH_SCREEN_HEIGHT-cursorpositiony[t]-scrollregion->bottom+cursorscrollspeedy[t], cursorscrollspeedx[t], -cursorscrollspeedy[t],t+1);
 	}
 }
 
@@ -5898,6 +6329,8 @@ void onTouchDragEnd(int t,int touch, float posx, float posy)
 		
 		cursorpositionx[t] = posx;
 		cursorpositiony[t] = posy;
+        
+        RemoveUTID(touch);
 
 		int dragidx = FindSingleDragTouch(touch);
 		
@@ -5905,27 +6338,36 @@ void onTouchDragEnd(int t,int touch, float posx, float posy)
 		{
 			if(dragtouches[dragidx].touch1 == touch)
 			{
-				RemoveUTID(dragtouches[dragidx].touch1);
+//				RemoveUTID(dragtouches[dragidx].touch1);
 				dragtouches[dragidx].touch1 = -1;
 			}
 			if(dragtouches[dragidx].touch2 == touch)
 			{
-				RemoveUTID(dragtouches[dragidx].touch2);
+//				RemoveUTID(dragtouches[dragidx].touch2);
 				dragtouches[dragidx].touch2 = -1;
 			}
 			if(	dragtouches[dragidx].touch1 == -1 && dragtouches[dragidx].touch2 == -1)
 			{
 				dragtouches[dragidx].active = false;
 				dragtouches[dragidx].dragregion->isDragged = false;
+                // Equivalent to OnTouchUp when dragging is enabled.
 				callScript(OnDragStop,dragtouches[dragidx].dragregion->OnEvents[OnDragStop], dragtouches[dragidx].dragregion);
 			}
-			else if(dragtouches[dragidx].touch2 != -1)
+			/*else if(dragtouches[dragidx].touch2 != -1)
 			{
 				RemoveUTID(dragtouches[dragidx].touch1);
 				dragtouches[dragidx].touch1 = dragtouches[dragidx].touch2;
 				dragtouches[dragidx].touch2 = -1;
+			}*/
+			if (dragtouches[dragidx].touch1 != -1
+                || dragtouches[dragidx].touch2 != -1)
+                dragtouches[dragidx].dragregion->isResized = false;
+
+			if (dragtouches[dragidx].touch1 == -1 && dragtouches[dragidx].touch2 != -1)
+			{
+				dragtouches[dragidx].touch1 = dragtouches[dragidx].touch2;
+				dragtouches[dragidx].touch2 = -1;
 			}
-			dragtouches[dragidx].dragregion->isResized = false;
 		}
 	}
 }
@@ -5965,7 +6407,8 @@ void onTouchDragEnd(int t,int touch, float posx, float posy)
 		NSUInteger numTaps = [touch tapCount];
 		CGPoint position = [touch locationInView:self];
 
-		onTouchDownParse(t, numTaps, position.x, position.y);
+        int id = AddUITouch([[touches allObjects] objectAtIndex:t]);
+		onTouchDownParse(t, numTaps, position.x, position.y, id);
 	}
 	
 	// Find two-finger drags
@@ -5973,11 +6416,10 @@ void onTouchDragEnd(int t,int touch, float posx, float posy)
 	{
 		for(int t2 = t1+1; t2<numTouches; t2++)
 		{
-			if(testDoubleDragStart(t1,t2))
+            int touch1 = AddUITouch([[touches allObjects] objectAtIndex:t1]); // Add does not overwrite if it exists.
+            int touch2 = AddUITouch([[touches allObjects] objectAtIndex:t2]);
+			if(touch1 != -1 && touch2 != -1 && testDoubleDragStart(touch1,touch2))
 			{
-				int touch1 = AddUITouch([[touches allObjects] objectAtIndex:t1]);
-				int touch2 = AddUITouch([[touches allObjects] objectAtIndex:t2]);
-
 				doTouchDoubleDragStart(t1,t2,touch1, touch2);
 			}
 		}
@@ -5986,13 +6428,13 @@ void onTouchDragEnd(int t,int touch, float posx, float posy)
 	// Find single finger drags (not already classified as two-finger ones.
 	for(int t = 0; t<numTouches; t++)
 	{
-		if(testSingleDragStart(t))
+        int touch1 = AddUITouch([[touches allObjects] objectAtIndex:t]);
+		if(FindSingleDragTouch(touch1) == -1 && testSingleDragStart(touch1)) // Figure out if we need FindSingleDragTouch here...
 		{
-			int touch1 = AddUITouch([[touches allObjects] objectAtIndex:t]);
 			CGPoint position1 = [[[touches allObjects] objectAtIndex:t] locationInView:self];
 			CGPoint position2;
 
-			int touch2 = getSingleDoubleTouchConversionID(t);
+			int touch2 = getSingleDoubleTouchConversionID(touch1);
 			
 			if(touch2 != -1)
 			{
@@ -6038,7 +6480,7 @@ void onTouchDragEnd(int t,int touch, float posx, float posy)
 		{
 			CGPoint oldposition = [[[touches allObjects] objectAtIndex:t] previousLocationInView:self];
 			int t2 = t;
-			if(oldposition.x != cursorpositionx[t] || oldposition.y != cursorpositiony[t])
+/*			if(oldposition.x != cursorpositionx[t] || oldposition.y != cursorpositiony[t])
 			{
 				for(t2=0; t2<MAX_FINGERS && (oldposition.x != cursorpositionx[t2] || oldposition.y != cursorpositiony[t2]); t2++);
 				if(t2==MAX_FINGERS)
@@ -6046,8 +6488,8 @@ void onTouchDragEnd(int t,int touch, float posx, float posy)
 					int a=0;
 					t2=t;
 				}
-			}	
-			onTouchMoveUpdate(t, t2, oldposition.x, oldposition.y, position.x, position.y);
+			}	*/
+			onTouchMoveUpdate(t, t2, oldposition.x, oldposition.y, position.x, position.y,FindSingleDragTouch(UITouch2UTID(touch)));
 		}
 		else
 		{
@@ -6119,7 +6561,7 @@ void onTouchDragEnd(int t,int touch, float posx, float posy)
 			onTouchDragEnd(t,touch,position.x,position.y);
 			CGPoint oldposition = [touchip previousLocationInView:self];
 			NSUInteger numTaps = [touchip tapCount];
-			onTouchEnds(numTaps, oldposition.x, oldposition.y, position.x, position.y);
+			onTouchEnds(numTaps, oldposition.x, oldposition.y, position.x, position.y, touch);
 		}
 		else
 		{
@@ -6176,10 +6618,10 @@ void onTouchDragEnd(int t,int touch, float posx, float posy)
 // It should also be descriptive and human-readable
 // See the following for more information:
 // http://developer.apple.com/networking/bonjour/faq.html
-#define kurNetIdentifier		@"urMus"
+#define kurNetIdentifier		@"urmus"
 
 
-#define kurNetTestID	@"_urMus._udp."
+#define kurNetTestID	@"_urmus._udp."
 
 extern MoNet myoscnet;
 
@@ -6202,7 +6644,7 @@ void Net_Send(float data)
 void Net_Advertise(const char* nsid, int port)
 {
 	NSString *nsid2 =  [[NSString alloc] initWithUTF8String: nsid];
-	NSString *fullnsid = [NSString stringWithFormat:@"_%@urMus._udp.", nsid2];
+	NSString *fullnsid = [NSString stringWithFormat:@"_%@urmus._udp.", nsid2];
 	[g_glView advertiseService:[[UIDevice currentDevice] name] withID:fullnsid atPort:port];
 //    [nsid2 release];
 }
@@ -6215,7 +6657,7 @@ void Net_Advertise(const char* nsid, int port)
 
 - (void) stopFindService:(NSString *)btype
 {
-    NSString *fullnsid = [NSString stringWithFormat:@"_%@urMus._udp.", btype];
+    NSString *fullnsid = [NSString stringWithFormat:@"_%@urmus._udp.", btype];
     NSNetServiceBrowser *aNetServiceBrowser = [searchtype objectForKey:fullnsid];
     if(aNetServiceBrowser!=NULL)
     {
@@ -6239,7 +6681,7 @@ void Stop_Net_Find(const char* nsid)
 void Net_Find(const char* nsid)
 {
 	NSString *nsid2 =  [[NSString alloc] initWithUTF8String: nsid];
-	NSString *fullnsid = [NSString stringWithFormat:@"_%@urMus._udp.", nsid2];
+	NSString *fullnsid = [NSString stringWithFormat:@"_%@urmus._udp.", nsid2];
 	[g_glView searchForServicesOfType:fullnsid inDomain:@""];
 }
 
@@ -6262,7 +6704,7 @@ void Net_Find(const char* nsid)
 
 int throttle = MAX_THROTTLE;
 
-void oscCallBack3(osc::ReceivedMessageArgumentStream & argument_stream, void * data)
+void oscCallBack3(osc::ReceivedMessageArgumentStream & argument_stream, osc::ReceivedMessage::const_iterator & arg, void * data)
 {
     if(throttle > 0)
     {
@@ -6282,7 +6724,7 @@ void oscCallBack3(osc::ReceivedMessageArgumentStream & argument_stream, void * d
     _services = [[NSMutableArray alloc] init];
     searchtype = [[NSMutableDictionary alloc] init];
     
-    NSString *fullnsid = [NSString stringWithFormat:@"_%@urMus._udp.", @"net1"];
+    NSString *fullnsid = [NSString stringWithFormat:@"_%@urmus._udp.", @"net1"];
     [self searchForServicesOfType:fullnsid inDomain:@""];
 	
 	[self advertiseService:[[UIDevice currentDevice] name] withID:fullnsid atPort:8888];
@@ -6295,7 +6737,7 @@ void oscCallBack3(osc::ReceivedMessageArgumentStream & argument_stream, void * d
     
 	[self advertiseService:[[UIDevice currentDevice] name] withID:kurNetTestID atPort:8888];
 
-	[self searchForServicesOfType:@"_urMus._udp." inDomain:@""];
+	[self searchForServicesOfType:@"_urmus._udp." inDomain:@""];
 }
 	
 
@@ -6345,7 +6787,7 @@ void oscCallBack3(osc::ReceivedMessageArgumentStream & argument_stream, void * d
             
 			NSString* ipaddress = [self.remoteIPs objectAtIndex:i];
             NSString* btype = [service type];
-            NSRange range = [btype rangeOfString:@"urMus._udp."];
+            NSRange range = [btype rangeOfString:@"urmus._udp."];
             btype = [btype substringWithRange:NSMakeRange(1, range.location-1)];
             callAllOnNetDisconnect([ipaddress UTF8String],[btype UTF8String]);
             [self.remoteIPs removeObjectAtIndex:i];
@@ -6394,7 +6836,7 @@ void oscCallBack3(osc::ReceivedMessageArgumentStream & argument_stream, void * d
 			if (![ipaddress isEqual:@"0.0.0.0"])
 			{
                 NSString* btype = [service type];
-                NSRange range = [btype rangeOfString:@"urMus._udp."];
+                NSRange range = [btype rangeOfString:@"urmus._udp."];
                 btype = [btype substringWithRange:NSMakeRange(1, range.location-1)];
 				callAllOnNetConnect([ipaddress UTF8String],[btype UTF8String]);
                 [remoteIPs addObject:ipaddress];

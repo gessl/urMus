@@ -55,6 +55,8 @@
 #include "Whistle.h"
 #include "Wurley.h"
 
+ #include "Grinder.h"
+ 
 #include "urSound.h"
 
 using namespace stk;
@@ -2949,8 +2951,81 @@ void Wurley_SetFrequency(ursObject* gself, double indata)
 	self->setFrequency(norm2Freq(indata));
 }
 
-// Interface - 
+// PebbleBox/Grinder extension
+// Interface - Grinder
 
+void* Grinder_Constructor()
+{
+	Grinder* self = new Grinder(0.5);
+	return (void*)self;
+}
+
+void Grinder_Destructor(ursObject* gself)
+{
+	Grinder* self = (Grinder*)gself->objectdata;
+	delete (Grinder*)self;
+}
+
+/*
+double Grinder_Tick(ursObject* gself)
+{
+	Grinder* self = (Grinder*)gself->objectdata;
+	
+	gself->FeedAllPullIns(1); // This is decoupled so no forwarding, just pulling to propagate our natural rate
+    
+	return self->tick(gself->CallAllPullIns());
+}
+*/
+
+double Grinder_Out(ursObject* gself)
+{
+    
+    Grinder* self = (Grinder*)gself->objectdata;
+
+	if(gself->firstpullin[0]!=NULL)
+    {
+        float res = gself->CallAllPullIns(0);
+    }
+    return self->lastOut();
+}
+
+double Grinder_ZeroCross(ursObject* gself)
+{
+	Grinder* self = (Grinder*)gself->objectdata;
+    
+	if(gself->firstpullin[1]!=NULL)
+    {
+        float res = gself->CallAllPullIns(1);
+    }    
+    return self->zeroCross();
+}
+
+void Grinder_In(ursObject* gself, double indata)
+{
+	Grinder* self = (Grinder*)gself->objectdata;
+	double res = 0;
+	res = self->tick(indata);
+    if(res != 0.0)
+    {
+        gself->CallAllPushOuts(res,0); // Only propagating onsets
+        gself->CallAllPushOuts(self->zeroCross(),1);
+    }
+}
+
+
+void Grinder_Thres(ursObject* gself, double indata)
+{
+	Grinder* self = (Grinder*)gself->objectdata;
+    self->setThreshold(indata);
+}
+
+void Grinder_Delay(ursObject* gself, double indata)
+{
+	Grinder* self = (Grinder*)gself->objectdata;
+    self->setGrainDelay(norm2PositiveLinear(indata)*48000);
+}
+
+// Interface -
 
 
 
@@ -2972,7 +3047,17 @@ void urSTK_Setup()
 	object->AddIn("Freq", "Frequency", Plucked_SetFrequency);
     addSTKNote(object);
 	urmanipulatorobjectlist.Append(object);
-	
+
+    object = new ursObject("Grinder", Grinder_Constructor, Grinder_Destructor,3,2);
+//	object->AddOut("Out", "TimeSeries", Grinder_Tick, Grinder_Out, NULL);
+	object->AddOut("Out", "TimeSeries", Grinder_Out, NULL, NULL);
+	object->AddOut("ZeroX", "ZeroCross", Grinder_ZeroCross, NULL , NULL);
+	object->AddIn("In", "Generic", Grinder_In);
+	object->AddIn("Thres", "Theshold", Grinder_Thres);
+	object->AddIn("Delay", "Delay", Grinder_Delay);
+    addSTKNote(object);
+	urmanipulatorobjectlist.Append(object);
+    
 	object = new ursObject("ADSR", ADSR_Constructor, ADSR_Destructor,5,1);
 	object->AddOut("Out", "TimeSeries", ADSR_Tick, ADSR_Out, NULL);
 

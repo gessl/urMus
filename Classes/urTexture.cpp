@@ -1,3 +1,5 @@
+#include "config.h"
+#ifndef UISTRINGS
 #include "urTexture.h"
 
 // static font storage
@@ -33,13 +35,13 @@ char *lineizer(char *s, bool &subst)
 enum { ATTRIB_VERTEX, ATTRIB_COLOR, ATTRIB_TEXTUREPOSITON, NUM_ATTRIBUTES };
 #endif
 
-#ifndef UISTRINGS
+//#ifndef UISTRINGS
 void urPushMatrix();
 void urPopMatrix();
 void urTranslatef(GLfloat x, GLfloat y, GLfloat z);
 void urRotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
 void urScalef(GLfloat sx, GLfloat sy, GLfloat sz);
-#endif
+//#endif
 
 inline int pow2roundup (int x)
 {
@@ -419,4 +421,5 @@ void urTexture::renderString(CGRect rect) {
  */
 	drawString(rect);
 }
+#endif
 

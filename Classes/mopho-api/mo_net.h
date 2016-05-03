@@ -50,7 +50,7 @@ class MoNetSender
 
 // Type of callback to handle received OSC messages.
 typedef void ( * MoNetReceiveCallback )( osc::ReceivedMessageArgumentStream 
-                                         & argument_stream, 
+& argument_stream, osc::ReceivedMessage::const_iterator & arg,
                                          void * data );
 
 
@@ -76,7 +76,7 @@ public:
     // (messages)
     static void addAddressCallback(
         const std::string pattern, 
-        const MoNetReceiveCallback & callback, 
+        const MoNetReceiveCallback & callback,
         void * data = NULL );
     static void removeAddressCallback( const std::string pattern );
     

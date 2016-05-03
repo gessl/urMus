@@ -7,6 +7,7 @@
 //
 
 #import "urMusAppDelegate.h"
+#import "RootViewController.h"
 #import "EAGLView.h"
 #include "urAPI.h"
 #include "RIOAudioUnitLayer.h"
@@ -139,6 +140,7 @@ extern std::string g_storagePath;
 -(void)applicationDidFinishLaunching:(UIApplication *)application {
 
     [[UIApplication sharedApplication] setStatusBarOrientation:UIDeviceOrientationPortrait animated:NO];
+//    [[UIApplication sharedApplication] setStatusBarOrientation:UIDeviceOrientationLandscapeLeft animated:NO];
 //- (void)applicationDidFinishLaunching:(UIApplication *)application {
     
 #ifdef NOXIB
@@ -157,20 +159,37 @@ extern std::string g_storagePath;
 										   //pixelFormat:kEAGLColorFormatRGBA8
 										   //depthFormat:GL_DEPTH_COMPONENT24_OES
 									//preserveBackbuffer:NO];
-	// make the OpenGLView a child of the main window
-	[window addSubview:glView];
+
     
+    // make the OpenGLView a child of the main window
+    // Use RootViewController manage EAGLView
+    viewController = [[RootViewController alloc] initWithNibName:nil bundle:nil];
+    viewController.wantsFullScreenLayout = YES;
+    viewController.view = glView;
+
+    
+    g_glView = glView;
+    /* Declare a Lua State, open the Lua State and load the libraries (see above). */
+    lua = lua_open();
+    luaL_openlibs(lua);
+    luaopen_lfs (lua); // Added external luafilesystem, runs under lua's open license
+    l_setupAPI(lua);
+    
+    
+    // Set RootViewController to window
+    NSString *reqSysVer = @"6.0";
+    NSString *currSysVer = [[UIDevice currentDevice] systemVersion];
+    if ([currSysVer compare:reqSysVer options:NSNumericSearch] != NSOrderedAscending) {
+        [window setRootViewController:viewController]; //iOS 6
+    } else {
+        [window addSubview: viewController.view]; //iOS 5 or less
+        //        [window addSubview:glView];
+    }
 	// make main window visible
 	[window makeKeyAndVisible];
 #endif
     
     
-	g_glView = glView;
-	/* Declare a Lua State, open the Lua State and load the libraries (see above). */
-	lua = lua_open();
-	luaL_openlibs(lua);
-	luaopen_lfs (lua); // Added external luafilesystem, runs under lua's open license
-	l_setupAPI(lua);
 
 
 
@@ -210,7 +229,11 @@ extern std::string g_storagePath;
 	NSString *resourcePath = [[NSBundle mainBundle] resourcePath];
 #endif
 #ifndef SLEEPER
+//    NSString *filePath = [resourcePath stringByAppendingPathComponent:@"urFinalDancer-modulation.lua"];
 	NSString *filePath = [resourcePath stringByAppendingPathComponent:@"urMus.lua"];
+//    NSString *filePath = [resourcePath stringByAppendingPathComponent:@"urConcertLaunch15.lua"];
+//    NSString *filePath = [resourcePath stringByAppendingPathComponent:@"urFinalDancer-slave.lua"];
+//    NSString *filePath = [resourcePath stringByAppendingPathComponent:@"urNetTest.lua"];
 //	NSString *filePath = [resourcePath stringByAppendingPathComponent:@"urBlank.lua"];
 //	NSString *filePath = [resourcePath stringByAppendingPathComponent:@"urVen2.lua"];
 #else

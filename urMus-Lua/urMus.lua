@@ -5,6 +5,8 @@
 -- Copyright (c) 2010-11 Georg Essl. All Rights Reserved. See LICENSE.txt for license conditions.
 
 dofile(SystemPath("urHelpers.lua"))
+dofile(SystemPath("urPagerButton.lua"))
+dofile(SystemPath("urInstructionText.lua"))
 Req("urWidget")
 
 local sqrt = math.sqrt
@@ -14,16 +16,37 @@ local sin = math.sin
 local cos = math.cos
 local ceil = math.ceil
 
+--local xdpi, ydpi = ScreenPixelsPerInch()
+
+--SetUIScale(xdpi/163,ydpi/163)
+
+local function AdjustDPI(x)
+	return x
+--[[
+	if xdpi then
+		DPrint(x*xdpi/163)
+		return x*xdpi/163 -- 163 is iPhone DPI
+	else
+		return x
+	end
+	]]
+end
+
 --urfont = "DroidSansMono.ttf"
 --urfont2 = "DroidSansMono.ttf"
-urfont2 = "Trebuchet MS"
+urfont = "Oregon LDO Bold.ttf"
+urfont2 = "Oregon LDO Bold.ttf"
 --urfont = "arial"
-urfont = "Helvetica"
+--urfont2 = "arial"
+--urfont = "Helvetica"
+--urfont2 = "Trebuchet MS"
+urfontheight = AdjustDPI(16)
 
 patchdir = "Patches"
 
 pagefile = {
 "urMus",
+"urGUIConfig.lua",
 --"urDistress.lua",
 --"urRainstick.lua",
 --"urSwarm.lua",
@@ -32,48 +55,50 @@ pagefile = {
 --"theremin_ipad_sound.lua",
 --"theremin_ipod_light.lua",
 --"theremin_ipod_sound.lua",
-"urTapperware.lua",
+--"urTapperware.lua",
 --"urFontTest.lua",
 "urTurn.lua",
 --"urTextLabelHighlight.lua",
 "urAlignTest.lua",
-"urSimplePatch.lua",
+--"urTextShadowTest.lua",
+--"urSimplePatch.lua",
 "urBasicFM.lua",
 --"urMovieWriteTest.lua",
 "urPinchDemo.lua",
 --"urMovieTest.lua",
 "urCameraFilterDemo.lua",
 --"urMovieInterface2.lua",
-"urTime.lua",
+--"urTime.lua",
 "urTurntable2.lua",
 "urColors.lua",
 --"urGEAugRel2.lua",
-"urVen2.lua",
-"urVen2-original.lua",
+--"urVen2.lua",
+--"urVen2-original.lua",
 "urSpriteAnimationExample.lua",
 "urLuaEditor.lua",
-"urDeleteFile.lua",
+--"urDeleteFile.lua",
 "urNetDiscoveryTest.lua",
-"urMenu.lua",
+--"urMenu.lua",
 "urDrawDemo1.lua",
 "urCameraDemo.lua",
 "urCameraBrush.lua",
-"urExternalTest.lua",
+--"urExternalTest.lua",
 "urPiano.lua",
 "urFlute.lua",
 "urPitcher.lua",
-"urBlank.lua",
+--"urBlank.lua",
 "urPlayground.lua",
 "urRecorder.lua",
 "urPads.lua",
 --"urCloud.lua",
 --"urClockSeq.lua",
-"urSleigh.lua",
-"urThumper.lua",
+--"urSleigh.lua",
+--"urThumper.lua",
 "urPitchWheel.lua",
 "urPaint.lua",
-"urSmudge.lua",
+--"urSmudge.lua",
 "urBounce.lua",
+"urMiniBounce.lua",
 "urPong.lua",
 "urTicTacToe.lua",
 "urVisDemo.lua",
@@ -82,11 +107,11 @@ pagefile = {
 "urTiles2.lua",
 --"urTuner.lua",
 --"urMetro.lua",
-"urDistance.lua",
-"urAnimExample.lua",
+--"urDistance.lua",
+--"urAnimExample.lua",
 "urNetTest.lua",
 "urMap.lua",
-"urColorOrgan.lua",
+--"urColorOrgan.lua",
 --"urMrNoisy.lua",
 --"urCircleOfWater.lua",
 --"urBall-Master-player2.lua",
@@ -94,29 +119,29 @@ pagefile = {
 --"urBall-player3.lua",
 --"urBall-player4.lua",
 --"urBall-display.lua",
-"urChroma.lua",
+--"urChroma.lua",
 --"urJamSession.lua",
 --"urFeedback.lua",
 --"urHarp.lua",
 --"urDuelNoise.lua",
 --"urPipeline.lua",
-"urRotaryPhonics1.lua",
-"urRotaryPhonics2.lua",
-"urRotaryPhonics3.lua",
-"urRotaryPhonics4.lua",
-"urRotaryPhonics5.lua",
-"urRotaryPhonics6.lua",
+--"urRotaryPhonics1.lua",
+--"urRotaryPhonics2.lua",
+--"urRotaryPhonics3.lua",
+--"urRotaryPhonics4.lua",
+--"urRotaryPhonics5.lua",
+--"urRotaryPhonics6.lua",
 --"urSpatialDidoo.lua",
-"urStrummer.lua",
-"urStrummerString.lua",
+--"urStrummer.lua",
+--"urStrummerString.lua",
 "urSynesthesia.lua",
-"urTurntable.lua",
-"urTurntableOSC.lua",
-"urTurntableOSC2.lua",
+--"urTurntable.lua",
+--"urTurntableOSC.lua",
+--"urTurntableOSC2.lua",
 --"urAir.lua",
 --"urWater.lua",
 --"urFire.lua",
-"urTest.lua",
+--"urTest.lua",
 }
 
 if SoarEnabled() then
@@ -129,8 +154,15 @@ if SoarEnabled() then
     table.insert( pagefile, 2, "urBeats.lua" )
 end
 
-local texturefiles = {
-  button = "button-padded.png",
+texturefiles = {
+  button = "button-unpadded.png",
+--  button = "button-padded.png",
+--  button = "urMus-basic-roundedsquare.png",
+--  button = "urMus-basic-roundedsquare2.png",
+--  button = "urMus-basic-circle.png",
+--  button = "urMus-basic-faderect.png",
+--  button = "highlightedbutton128x64.png",
+--  button = "highlightedbutton128x64 copy.png",
 -- button = "buttonvar1-64x80-padded.png", Fugly
 -- button = "buttonvar2-64x80-padded.png", Fairly fugly
 --  button = "buttonvar3-64x80-padded.png", Fugly
@@ -145,6 +177,59 @@ local texturefiles = {
 }
 
 
+colors = {
+	buttons = {{255,0,0,255},{0,255,0,255},{0,0,255,255}},
+	buttonanchors = {{140,0,0,255},{0,140,0,255},{0,0,140,255}},
+	backdrops = {{160,0,0,255},{0,160,0,255},{0,0,160,255}}
+}
+
+function SetColorScheme(r,g,b,a,fbtype)
+	colors.buttons[fbtype] = {r,g,b,a}
+	colors.buttonanchors[fbtype] = {math.max(r-115,0),math.max(g-115,0),math.max(b-115,0),a}
+	colors.backdrops[fbtype] = {math.max(r-95,0),math.max(g-95,0),math.max(b-95,0),a}
+end
+
+function ImpartColorScheme()
+	for i=1,3 do
+		for k,v in pairs(protofbcells[i]) do
+			if v and v.texture then
+				v.texture:SetSolidColor(unpack(colors.buttons[i]))
+			end
+		end
+	end
+	for k,v in pairs(rowregions) do
+		for k2,v2 in pairs(v) do
+			if v2.texture then
+				v2.texture:SetSolidColor(unpack(colors.buttons[v2.fbtype]))
+			end
+		end
+	end
+
+	for k,v in pairs(celllock) do
+		for k2,v2 in pairs(v) do
+			SetFlowboxLockColor(v2.texture,v2.fbtype)
+		end
+	end
+
+	for k,v in pairs(cellbackdrop) do
+		for k2,v2 in pairs(v) do
+			SetTexturedFlowboxBackdropColor(v2.t, v2.fbtype)
+		end
+	end
+
+	SetFlowboxBackdropColor(switchbackdrop.t,activefbtype)
+
+	for fbtype=1,3 do
+		if fbtype == activefbtype then
+			SetNavigationArrowSelectColor(fbprotoselectionswitcher[fbtype].texture,fbtype)
+		else
+			SetNavigationArrowColor(fbprotoselectionswitcher[fbtype].texture,fbtype)
+		end
+	end
+	SetNavigationArrowColor(sourceselscrollleft.texture, activefbtype)
+	SetNavigationArrowColor(sourceselscrollright.texture, activefbtype)
+end
+
 scrollpage = 29
 
 pageloaded = {}
@@ -155,31 +240,37 @@ next_linked_page = 1
 next_free_page = 2
 
 -- Make pager bigger for large finger people
-pagersize = 32
+pagersize = math.min(ScreenWidth()/320*AdjustDPI(32),AdjustDPI(64)) --32
 --pagersize = 24
 
 -- Load utility and library functions here
 dofile(SystemPath("urScrollList.lua"))
 
-local titlebar = 28
+local titlebar = math.min(ScreenHeight()/AdjustDPI(480)*AdjustDPI(28),AdjustDPI(56))
 local menubottonheight = titlebar
-local selectorheight = 122
+local selectorheight = AdjustDPI(122)
 local editheightmargins = titlebar + selectorheight
 local editwidthmargins = 0
-local editselwidthmargins = 68
+local editselwidthmargins = AdjustDPI(68)
 
-local minrow = ceil((ScreenHeight() - editheightmargins)/110)
+local minrow = ceil((ScreenHeight() - editheightmargins)/(AdjustDPI(110)))
 
-local mincol = ceil(ScreenWidth()/(320.0/3.0))
+local mincol = ceil(ScreenWidth()/(AdjustDPI(320.0)/3.0))
 local mineditcol = 3
 
 local maxselrows = minrow
 
 local rowheight = (ScreenHeight()-editheightmargins)/minrow -- 110 -- aka rawhide
-local protocellheight = 80 --ScreenHeight()/6
+local protocellheight = AdjustDPI(80) --ScreenHeight()/6
 local colwidth = (ScreenWidth()-editwidthmargins)/mincol
 local colselwidth = (ScreenWidth()-editselwidthmargins)/mincol
-local protocellwidth = 64 -- 78 --ScreenWidth()/5
+local protocellwidth = AdjustDPI(64) -- 78 --ScreenWidth()/5
+
+--DPrint("CC: "..colwidth .. " " .. protocellwidth)
+
+local prototypexoffset = AdjustDPI(34+18)
+local prototypeyoffset = AdjustDPI(10)
+
 
 local maxrow = 0
 local currentrow = 1
@@ -619,80 +710,32 @@ fbpos[3] = 1
 
 -- Set the flowbox color of an entity
 function SetFlowboxColor(texture, fbtype)
-	if fbtype == 1 then
-		texture:SetGradientColor("TOP",255,0,0,255,255,0,0,255)
-		texture:SetGradientColor("BOTTOM",255,0,0,255,255,0,0,255)
-	elseif fbtype == 2 then
-		texture:SetGradientColor("TOP",0,255,0,255,0,255,0,255)
-		texture:SetGradientColor("BOTTOM",0,255,0,255,0,255,0,255)
-	elseif fbtype == 3 then
-		texture:SetGradientColor("TOP",0,0,255,255,0,0,255,255)
-		texture:SetGradientColor("BOTTOM",0,0,255,255,0,0,255,255)
-	end
+	texture:SetSolidColor(unpack(colors.buttons[fbtype]))
 end
 
 -- Set a lock flowbox color
 function SetFlowboxLockColor(texture, fbtype)
-	if fbtype == 1 then
-		texture:SetTexture(140,0,0,255)
-	elseif fbtype == 2 then
-		texture:SetTexture(0,140,0,255)
-	elseif fbtype == 3 then
-		texture:SetTexture(0,0,140,255)
-	end
+	texture:SetSolidColor(unpack(colors.buttonanchors[fbtype]))
 end
 
 -- Set a backdrop flowbox color
 function SetFlowboxBackdropColor(texture, fbtype)
-	if fbtype == 1 then
-		texture:SetTexture(160,0,0,128)
-	elseif fbtype == 2 then
-		texture:SetTexture(0,160,0,128)
-	elseif fbtype == 3 then
-		texture:SetTexture(0,0,160,128)
-	end		
+	texture:SetSolidColor(unpack(colors.backdrops[fbtype]))
 end
 
 -- Set a backdrop flowbox color
 function SetTexturedFlowboxBackdropColor(texture, fbtype)
-	if fbtype == 1 then
-		texture:SetGradientColor("TOP",160,0,0,255,160,0,0,255)
-		texture:SetGradientColor("BOTTOM",160,0,0,255,160,0,0,255)
-	elseif fbtype == 2 then
-		texture:SetGradientColor("TOP",0,160,0,255,0,160,0,255)
-		texture:SetGradientColor("BOTTOM",0,160,0,255,0,160,0,255)
-	elseif fbtype == 3 then
-		texture:SetGradientColor("TOP",0,0,160,255,0,0,160,255)
-		texture:SetGradientColor("BOTTOM",0,0,160,255,0,0,160,255)
-	end		
+	texture:SetSolidColor(unpack(colors.backdrops[fbtype]))
 end
 
 -- Set an nav arrow color
 function SetNavigationArrowColor(texture, fbtype)
-	if fbtype == 1 then
-		texture:SetGradientColor("TOP",160,0,0,255,160,0,0,255)
-		texture:SetGradientColor("BOTTOM",255,0,0,255,255,0,0,255)
-	elseif fbtype == 2 then
-		texture:SetGradientColor("TOP",0,160,0,255,0,160,0,255)
-		texture:SetGradientColor("BOTTOM",0,225,0,255,0,225,0,255)
-	elseif fbtype == 3 then
-		texture:SetGradientColor("TOP",0,0,160,255,0,0,160,255)
-		texture:SetGradientColor("BOTTOM",0,0,225,255,0,0,225,255)
-	end
+	texture:SetSolidColor(unpack(colors.backdrops[fbtype]))
 end
 
 -- Set an nav arrow select color
 function SetNavigationArrowSelectColor(texture, fbtype)
-	if fbtype == 1 then
-		texture:SetGradientColor("TOP",160,0,0,255,160,0,0,255)
-		texture:SetGradientColor("BOTTOM",160,0,0,255,160,0,0,255)
-	elseif fbtype == 2 then
-		texture:SetGradientColor("TOP",0,160,0,255,0,160,0,255)
-		texture:SetGradientColor("BOTTOM",0,160,0,255,0,160,0,255)
-	elseif fbtype == 3 then
-		texture:SetGradientColor("TOP",0,0,160,255,0,0,160,255)
-		texture:SetGradientColor("BOTTOM",0,0,160,255,0,0,160,255)
-	end
+	texture:SetSolidColor(unpack(colors.backdrops[fbtype]))
 end
 
 local recyclebuttons = {}
@@ -834,13 +877,14 @@ function CreateButton(x,y,col,fbtype,label,flowbox,inidx, instance)
 		returnbutton.textlabel:SetFont(urfont)
 		returnbutton.textlabel:SetHorizontalAlign("CENTER")
 		returnbutton.textlabel:SetLabel(label)
-		returnbutton.textlabel:SetFontHeight(16)
+		returnbutton.textlabel:SetFontHeight(urfontheight)
 		returnbutton.textlabel:SetColor(255,255,255,255)
 		returnbutton.textlabel:SetShadowColor(0,0,0,190)
 		returnbutton.textlabel:SetShadowBlur(2.0)
 		returnbutton.texture = returnbutton:Texture(texturefiles.button)
+		returnbutton.texture:SetBlendMode("BLEND")
 		SetFlowboxColor(returnbutton.texture, fbtype)
-		returnbutton.texture:SetTexCoord(0,1.0,0,0.625)
+--		returnbutton.texture:SetTexCoord(0,1.0,0,0.625)
 		returnbutton:EnableInput(true)
 		returnbutton:EnableMoving(true)
 		returnbutton:Show()
@@ -1202,6 +1246,7 @@ function EnableRow(row)
 		cellbackdrop[row][col]:Show()
 		celllock[row][col]:EnableInput(true)
 		celllock[row][col]:Show()
+--		celllock[row][col]:Hide()
 		if rowregions[row][col] then
 			rowregions[row][col]:EnableInput(true)
 			rowregions[row][col]:Show()
@@ -1372,7 +1417,7 @@ function AddRow(row)
 			newcellbackdrop[col]:SetAnchor('LEFT',newcellbackdrop[col-1],'RIGHT', 0,0)
 		end
 		newcellbackdrop[col]:Show()
-		newcellbackdrop[col].t = newcellbackdrop[col]:Texture("backdrop-edge-brighter-128.png")
+		newcellbackdrop[col].t = newcellbackdrop[col]:Texture(texturefiles.backdropedge)
 		SetTexturedFlowboxBackdropColor(newcellbackdrop[col].t, ColumnToFBType(col))
 		newcellbackdrop[col].row = row
 		newcellbackdrop[col].column = col
@@ -1381,13 +1426,17 @@ function AddRow(row)
 		newcellbackdrop[col]:EnableClipping(true)
 
 		newcelllock[col]=Region('region', 'celllock'..row.."."..col, UIParent)
+--		newcelllock[col]:SetWidth(colwidth*0.2)
+--		newcelllock[col]:SetHeight(rowheight*0.2)
 		newcelllock[col]:SetWidth(protocellwidth)
 		newcelllock[col]:SetHeight(protocellheight)
 		newcelllock[col]:SetLayer("MEDIUM")
 		newcelllock[col]:SetAnchor('CENTER',newcellbackdrop[col],'CENTER',0,0)
-		newcelllock[col]:Show()
+--		newcelllock[col]:Show()
+		newcelllock[col]:Hide()
 		newcelllock[col].texture = newcelllock[col]:Texture()
 		SetFlowboxLockColor(newcelllock[col].texture,ColumnToFBType(col))
+--		newcelllock[col].texture:SetTexture("backdrop-edge-brighter-128.png")
 		newcelllock[col]:Handle("OnEnter", RegisterLock)
 		newcelllock[col]:Handle("OnLeave", UnRegisterLock)
 		if col > 1 and col < mincol then
@@ -1414,7 +1463,7 @@ function AddRow(row)
 		newfbconnect[col]:SetAnchor('CENTER',newcellbackdrop[col+1],"LEFT", 11, 0) 
 		newfbconnect[col]:SetLayer("MEDIUM")
 		newfbconnect[col]:Hide()
-		newfbconnect[col].t = newfbconnect[col]:Texture("connectarrow2.png")
+		newfbconnect[col].t = newfbconnect[col]:Texture(texturefiles.connectarrow)
 		newfbconnect[col].t:SetBlendMode("BLEND")
 		newfbconnect[col].t:SetTexCoord(0,1.0,0,1.0)
 		newfbconnect[col].t:SetGradientColor("TOP",180,180,180,255,180,180,180,255)
@@ -1551,7 +1600,7 @@ function SplitArrow(self)
 	newcellbackdrop:SetLayer("LOW")
 	newcellbackdrop:SetAnchor('LEFT',cellbackdrop[row][col-1],'RIGHT', 0,0)
 	newcellbackdrop:Show()
-	newcellbackdrop.t = newcellbackdrop:Texture("backdrop-edge-brighter-128.png")
+	newcellbackdrop.t = newcellbackdrop:Texture(texturefiles.backdropedge)
 	SetTexturedFlowboxBackdropColor(newcellbackdrop.t, fbtype)
 	newcellbackdrop:SetClipRegion(0,selectorheight,ScreenWidth(),rowheight*minrow)
 	newcellbackdrop:EnableClipping(true)
@@ -1560,11 +1609,14 @@ function SplitArrow(self)
 
 	newcelllock = {}
 	newcelllock=Region('region', 'filterlock'..row.."."..col, UIParent)
-	newcelllock:SetWidth(protocellwidth)
-	newcelllock:SetHeight(protocellheight)
+	newcelllock:SetWidth(colwidth*0.8)
+	newcelllock:SetHeight(rowheight*0.8)
+--	newcelllock:SetWidth(protocellwidth)
+--	newcelllock:SetHeight(protocellheight)
 	newcelllock:SetLayer("MEDIUM")
 	newcelllock:SetAnchor('CENTER',newcellbackdrop,'CENTER',0,0) 
-	newcelllock:Show()
+--	newcelllock:Show()
+	newcelllock:Hide()
 	newcelllock.texture = newcelllock:Texture()
 	SetFlowboxLockColor(newcelllock.texture, fbtype)
 	newcelllock:Handle("OnEnter", RegisterLock)
@@ -1587,7 +1639,7 @@ function SplitArrow(self)
 	newfbconnect:SetAnchor('CENTER',newcellbackdrop,"LEFT", 11, 0) 
 	newfbconnect:SetLayer("MEDIUM")
 	newfbconnect:Hide()
-	newfbconnect.t = newfbconnect:Texture("connectarrow2.png")
+	newfbconnect.t = newfbconnect:Texture(texturefiles.connectarrow)
 	newfbconnect.t:SetBlendMode("BLEND")
 	newfbconnect.t:SetTexCoord(0,1.0,0,1.0)
 	newfbconnect.t:SetGradientColor("TOP",180,180,180,255,180,180,180,255)
@@ -1676,24 +1728,24 @@ end
 
 switchbackdrop = Region('region', 'switchbackdrop', UIParent)
 switchbackdrop:SetWidth(ScreenWidth())
-switchbackdrop:SetHeight(90+32+(maxselrows-1)*rowheight)
+switchbackdrop:SetHeight(selectorheight+(maxselrows-1)*rowheight)
 switchbackdrop:SetAnchor("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, -(maxselrows-1)*rowheight)
 switchbackdrop:SetLayer("LOW")
 switchbackdrop:Show()
 switchbackdrop:Handle("OnHorizontalScroll", ScrollSelector)
 switchbackdrop:EnableHorizontalScroll(true)
 switchbackdrop:EnableInput(true)
-switchbackdrop.t = switchbackdrop:Texture()
+switchbackdrop.t = switchbackdrop:Texture(texturefiles.backdropedge)
 SetFlowboxBackdropColor(switchbackdrop.t,activefbtype) -- Start of with sources
 
-local fbprotoselectionswitcher = {}
+fbprotoselectionswitcher = {}
 
 -- Setup buttom switchboard
 
 for fbtype=1,3 do
 	fbprotoselectionswitcher[fbtype] = Region('region', 'fbprotoselectionswitcher[fbtype]', UIParent)
-	fbprotoselectionswitcher[fbtype]:SetWidth(64)
-	fbprotoselectionswitcher[fbtype]:SetHeight(64)
+	fbprotoselectionswitcher[fbtype]:SetWidth(AdjustDPI(64))
+	fbprotoselectionswitcher[fbtype]:SetHeight(AdjustDPI(64))
 	fbprotoselectionswitcher[fbtype]:SetLayer("HIGH")
 --	fbprotoselectionswitcher[fbtype]:SetAnchor('CENTER', switchbackdrop, 'TOP', (fbtype-2)*ScreenWidth()/3, 0)
 	if fbtype == 1 then
@@ -1704,10 +1756,10 @@ for fbtype=1,3 do
 		fbprotoselectionswitcher[fbtype]:SetAnchor('CENTER', switchbackdrop, 'TOPRIGHT', -colwidth/2, -4)
 	end
 	if fbtype == activefbtype then
-		fbprotoselectionswitcher[fbtype].texture = fbprotoselectionswitcher[fbtype]:Texture("doublearrow.png")
+		fbprotoselectionswitcher[fbtype].texture = fbprotoselectionswitcher[fbtype]:Texture(texturefiles.doublearrow)
 		SetNavigationArrowSelectColor(fbprotoselectionswitcher[fbtype].texture,fbtype)
 	else
-		fbprotoselectionswitcher[fbtype].texture = fbprotoselectionswitcher[fbtype]:Texture("downarrow.png")
+		fbprotoselectionswitcher[fbtype].texture = fbprotoselectionswitcher[fbtype]:Texture(texturefiles.downarrow)
 		SetNavigationArrowColor(fbprotoselectionswitcher[fbtype].texture,fbtype)
 	end
 	fbprotoselectionswitcher[fbtype].texture:SetBlendMode("BLEND")
@@ -1838,10 +1890,10 @@ for fbtype=1,3 do
 			protofbcells[fbtype][cell]:SetWidth(protocellwidth)
 			protofbcells[fbtype][cell]:SetHeight(protocellheight)
 			protofbcells[fbtype][cell]:SetLayer("DIALOG")
-			protofbcells[fbtype][cell]:SetAnchor('BOTTOMLEFT',switchbackdrop,'BOTTOMLEFT',(col-1)*colselwidth+34+18,10+(maxselrows-row)*rowheight) 
+			protofbcells[fbtype][cell]:SetAnchor('BOTTOMLEFT',switchbackdrop,'BOTTOMLEFT',(col-1)*colselwidth+prototypexoffset,prototypeyoffset+(maxselrows-row)*rowheight) 
 			protofbcells[fbtype][cell]:EnableClamping(true)
-			protofbcells[fbtype][cell].lockposx = (col-1)*colselwidth+34+18
-			protofbcells[fbtype][cell].lockposy = 10+(maxselrows-row)*rowheight
+			protofbcells[fbtype][cell].lockposx = (col-1)*colselwidth+prototypexoffset
+			protofbcells[fbtype][cell].lockposy = prototypeyoffset+(maxselrows-row)*rowheight
 			protofbcells[fbtype][cell].fbtype = fbtype	
 			protofbcells[fbtype][cell]:Handle("OnTouchDown", UnlockCursor)
 	--		protofbcells[fbtype][cell]:Handle("OnDragStart", UnlockCursor)
@@ -1850,14 +1902,16 @@ for fbtype=1,3 do
 			protofbcells[fbtype][cell].textlabel=protofbcells[fbtype][cell]:TextLabel()
 			protofbcells[fbtype][cell].textlabel:SetFont(urfont)
 			protofbcells[fbtype][cell].textlabel:SetHorizontalAlign("CENTER")
-			protofbcells[fbtype][cell].textlabel:SetLabel("Source")
-			protofbcells[fbtype][cell].textlabel:SetFontHeight(16)
+--			protofbcells[fbtype][cell].textlabel:SetLabel("Source")
+			protofbcells[fbtype][cell].textlabel:SetFontHeight(urfontheight)
 			protofbcells[fbtype][cell].textlabel:SetColor(255,255,255,255)
 			protofbcells[fbtype][cell].textlabel:SetShadowColor(0,0,0,190)
 			protofbcells[fbtype][cell].textlabel:SetShadowBlur(2.0)
 			protofbcells[fbtype][cell].texture = protofbcells[fbtype][cell]:Texture(texturefiles.button)
+			protofbcells[fbtype][cell].texture:SetBlendMode("BLEND")
+
 			SetFlowboxColor(protofbcells[fbtype][cell].texture, fbtype)
-			protofbcells[fbtype][cell].texture:SetTexCoord(0,1.0,0,0.625)
+--			protofbcells[fbtype][cell].texture:SetTexCoord(0,1.0,0,0.625)
 			if fbtype == activefbtype then
 				protofbcells[fbtype][cell]:Show()
 				protofbcells[fbtype][cell]:EnableInput(true)
@@ -1920,10 +1974,10 @@ function SwitchFBType(self)
 	
 	for fbtype = 1,3 do
 		if fbtype == activefbtype then
-			fbprotoselectionswitcher[fbtype].texture:SetTexture("doublearrow.png")
+			fbprotoselectionswitcher[fbtype].texture:SetTexture(texturefiles.doublearrow)
 			SetNavigationArrowSelectColor(fbprotoselectionswitcher[fbtype].texture, fbtype)
 		else
-			fbprotoselectionswitcher[fbtype].texture:SetTexture("downarrow.png")
+			fbprotoselectionswitcher[fbtype].texture:SetTexture(texturefiles.downarrow)
 			SetNavigationArrowColor(fbprotoselectionswitcher[fbtype].texture, fbtype)
 		end
 		for cell = 1,maxcellpos do
@@ -2044,10 +2098,10 @@ switchbackdrop:EnableVerticalScroll(true)
 switchbackdrop:Handle("OnTouchUp", MoveSelectorEnds)
 
 sourceselscrollleft = Region('region', 'sourceselscrollleft', UIParent)
-sourceselscrollleft:SetWidth(40)
-sourceselscrollleft:SetHeight(80)
+sourceselscrollleft:SetWidth(AdjustDPI(40))
+sourceselscrollleft:SetHeight(AdjustDPI(80))
 sourceselscrollleft:SetLayer("MEDIUM")
-sourceselscrollleft:SetAnchor('BOTTOMLEFT',4,0)
+sourceselscrollleft:SetAnchor('BOTTOMLEFT',AdjustDPI(4),0)
 sourceselscrollleft.texture = sourceselscrollleft:Texture("leftarrow.png")
 SetNavigationArrowColor(sourceselscrollleft.texture, activefbtype)
 sourceselscrollleft.texture:SetBlendMode("BLEND")
@@ -2056,10 +2110,10 @@ sourceselscrollleft:EnableInput(true)
 sourceselscrollleft:Show()
 
 sourceselscrollright = Region('region', 'sourceselscrollright', UIParent)
-sourceselscrollright:SetWidth(40)
-sourceselscrollright:SetHeight(80)
+sourceselscrollright:SetWidth(AdjustDPI(40))
+sourceselscrollright:SetHeight(AdjustDPI(80))
 sourceselscrollright:SetLayer("MEDIUM")
-sourceselscrollright:SetAnchor('BOTTOMLEFT',ScreenWidth()-24-4,0)
+sourceselscrollright:SetAnchor('BOTTOMLEFT',ScreenWidth()-AdjustDPI(24-4),0)
 sourceselscrollright.texture = sourceselscrollright:Texture("rightarrow.png")
 SetNavigationArrowColor(sourceselscrollright.texture, activefbtype)
 sourceselscrollright.texture:SetBlendMode("BLEND")
@@ -2136,12 +2190,14 @@ function FlipPage(self)
 		local entry = { v, nil, nil, LoadAndActivateInterface, {84,84,84,255}}
 		table.insert(scrollentries, entry)
 	end
+	--[[
 	for v in lfs.dir(DocumentPath("")) do
 		if v ~= "." and v ~= ".." and string.find(v,"%.lua$") then
 			local entry = { v, nil, nil, LoadAndActivateInterface, {84,84,84,255}, DocumentPath("")}
 			table.insert(scrollentries, entry)			
 		end
 	end
+	--]]
 	
 	urScrollList:OpenScrollListPage(scrollpage, "Interface", nil, nil, scrollentries)
 end
@@ -2150,14 +2206,14 @@ sourcetitlelabel=Region('region', 'sourcetitlelabel', UIParent)
 sourcetitlelabel:SetWidth(ScreenWidth())
 sourcetitlelabel:SetHeight(16)
 sourcetitlelabel:SetLayer("TOOLTIP")
-sourcetitlelabel:SetAnchor('CENTER', backdropanchor[1], 'TOPLEFT', colwidth/2, -4)
+sourcetitlelabel:SetAnchor('CENTER', backdropanchor[1], 'TOPLEFT', colwidth/2, AdjustDPI(-4))
 sourcetitlelabel:Show()
 sourcetitlelabel.textlabel=sourcetitlelabel:TextLabel()
 sourcetitlelabel.textlabel:SetFont(urfont)
 sourcetitlelabel.textlabel:SetHorizontalAlign("CENTER")
 sourcetitlelabel.textlabel:SetVerticalAlign("TOP")
 sourcetitlelabel.textlabel:SetLabel("Source")
-sourcetitlelabel.textlabel:SetFontHeight(16)
+sourcetitlelabel.textlabel:SetFontHeight(urfontheight)
 sourcetitlelabel.textlabel:SetColor(255,255,255,255)
 sourcetitlelabel.textlabel:SetShadowColor(0,0,0,190)
 sourcetitlelabel.textlabel:SetShadowBlur(2.0)
@@ -2168,14 +2224,14 @@ filtertitlelabel=Region('region', 'filtertitlelabel', UIParent)
 filtertitlelabel:SetWidth(ScreenWidth())
 filtertitlelabel:SetHeight(16)
 filtertitlelabel:SetLayer("TOOLTIP")
-filtertitlelabel:SetAnchor('CENTER', backdropanchor[1], 'TOP', 0, -4)
+filtertitlelabel:SetAnchor('CENTER', backdropanchor[1], 'TOP', 0, AdjustDPI(-4))
 filtertitlelabel:Show()
 filtertitlelabel.textlabel=filtertitlelabel:TextLabel()
 filtertitlelabel.textlabel:SetFont(urfont)
 filtertitlelabel.textlabel:SetHorizontalAlign("CENTER")
 filtertitlelabel.textlabel:SetVerticalAlign("TOP")
 filtertitlelabel.textlabel:SetLabel("Filter")
-filtertitlelabel.textlabel:SetFontHeight(16)
+filtertitlelabel.textlabel:SetFontHeight(urfontheight)
 filtertitlelabel.textlabel:SetColor(255,255,255,255)
 filtertitlelabel.textlabel:SetShadowColor(0,0,0,190)
 filtertitlelabel.textlabel:SetShadowBlur(2.0)
@@ -2186,19 +2242,29 @@ sinktitlelabel=Region('region', 'sinktitlelabel', UIParent)
 sinktitlelabel:SetWidth(ScreenWidth())
 sinktitlelabel:SetHeight(16)
 sinktitlelabel:SetLayer("TOOLTIP")
-sinktitlelabel:SetAnchor('CENTER', backdropanchor[1], 'TOPRIGHT', -colwidth/2, -4)
+sinktitlelabel:SetAnchor('CENTER', backdropanchor[1], 'TOPRIGHT', -colwidth/2, AdjustDPI(-4))
 sinktitlelabel:Show()
 sinktitlelabel.textlabel=sinktitlelabel:TextLabel()
 sinktitlelabel.textlabel:SetFont(urfont)
 sinktitlelabel.textlabel:SetHorizontalAlign("CENTER")
 sinktitlelabel.textlabel:SetVerticalAlign("TOP")
 sinktitlelabel.textlabel:SetLabel("Sink")
-sinktitlelabel.textlabel:SetFontHeight(16)
+sinktitlelabel.textlabel:SetFontHeight(urfontheight)
 sinktitlelabel.textlabel:SetColor(255,255,255,255)
 sinktitlelabel.textlabel:SetShadowColor(0,0,0,190)
 sinktitlelabel.textlabel:SetShadowBlur(2.0)
 sinktitlelabel:SetClipRegion(0,selectorheight,ScreenWidth(),rowheight*minrow)
 sinktitlelabel:EnableClipping(true)
+
+function HighlightButton(self)
+--	local r,g,b,a = self.texture:SolidColor()
+--	self.texture:SetSolidColor(r*1.2,g*1.2,b*1.2,a)
+end
+
+function DelightButton(self)
+--	local r,g,b,a = self.texture:SolidColor()
+--	self.texture:SetSolidColor(r/1.2,g/1.2,b/1.2,a)
+end
 
 clearbutton=Region('region', 'clearbutton', UIParent)
 clearbutton:SetWidth(ScreenWidth()/4)
@@ -2211,14 +2277,14 @@ clearbutton.texture = clearbutton:Texture(texturefiles.button)
 clearbutton.texture:SetGradientColor("TOP",128,128,128,255,128,128,128,255)
 clearbutton.texture:SetGradientColor("BOTTOM",128,128,128,255,128,128,128,255)
 clearbutton.texture:SetBlendMode("BLEND")
-clearbutton.texture:SetTexCoord(0,1.0,0,0.625)
+--clearbutton.texture:SetTexCoord(0,1.0,0,0.625)
 clearbutton:EnableInput(true)
 clearbutton:Show()
 clearbutton.textlabel=clearbutton:TextLabel()
 clearbutton.textlabel:SetFont(urfont)
 clearbutton.textlabel:SetHorizontalAlign("CENTER")
 clearbutton.textlabel:SetLabel("Clear")
-clearbutton.textlabel:SetFontHeight(16)
+clearbutton.textlabel:SetFontHeight(urfontheight)
 clearbutton.textlabel:SetColor(255,255,255,255)
 clearbutton.textlabel:SetShadowColor(0,0,0,190)
 clearbutton.textlabel:SetShadowBlur(2.0)
@@ -2234,14 +2300,14 @@ loadbutton.texture = loadbutton:Texture(texturefiles.button)
 loadbutton.texture:SetGradientColor("TOP",128,128,128,255,128,128,128,255)
 loadbutton.texture:SetGradientColor("BOTTOM",128,128,128,255,128,128,128,255)
 loadbutton.texture:SetBlendMode("BLEND")
-loadbutton.texture:SetTexCoord(0,1.0,0,0.625)
+--loadbutton.texture:SetTexCoord(0,1.0,0,0.625)
 loadbutton:EnableInput(true)
 loadbutton:Show()
 loadbutton.textlabel=loadbutton:TextLabel()
 loadbutton.textlabel:SetFont(urfont)
 loadbutton.textlabel:SetHorizontalAlign("CENTER")
 loadbutton.textlabel:SetLabel("Load")
-loadbutton.textlabel:SetFontHeight(16)
+loadbutton.textlabel:SetFontHeight(urfontheight)
 loadbutton.textlabel:SetColor(255,255,255,255)
 loadbutton.textlabel:SetShadowColor(0,0,0,190)
 loadbutton.textlabel:SetShadowBlur(2.0)
@@ -2257,14 +2323,14 @@ savebutton.texture = savebutton:Texture(texturefiles.button)
 savebutton.texture:SetGradientColor("TOP",128,128,128,255,128,128,128,255)
 savebutton.texture:SetGradientColor("BOTTOM",128,128,128,255,128,128,128,255)
 savebutton.texture:SetBlendMode("BLEND")
-savebutton.texture:SetTexCoord(0,1.0,0,0.625)
+--savebutton.texture:SetTexCoord(0,1.0,0,0.625)
 savebutton:EnableInput(true)
 savebutton:Show()
 savebutton.textlabel=savebutton:TextLabel()
 savebutton.textlabel:SetFont(urfont)
 savebutton.textlabel:SetHorizontalAlign("CENTER")
 savebutton.textlabel:SetLabel("Save")
-savebutton.textlabel:SetFontHeight(16)
+savebutton.textlabel:SetFontHeight(urfontheight)
 savebutton.textlabel:SetColor(255,255,255,255)
 savebutton.textlabel:SetShadowColor(0,0,0,190)
 savebutton.textlabel:SetShadowBlur(2.0)
@@ -2280,18 +2346,19 @@ facebutton.texture = facebutton:Texture(texturefiles.button)
 facebutton.texture:SetGradientColor("TOP",128,128,128,255,128,128,128,255)
 facebutton.texture:SetGradientColor("BOTTOM",128,128,128,255,128,128,128,255)
 facebutton.texture:SetBlendMode("BLEND")
-facebutton.texture:SetTexCoord(0,1.0,0,0.625)
+--facebutton.texture:SetTexCoord(0,1.0,0,0.625)
 facebutton:EnableInput(true)
 facebutton:Show()
 facebutton.textlabel=facebutton:TextLabel()
 facebutton.textlabel:SetFont(urfont)
 facebutton.textlabel:SetHorizontalAlign("CENTER")
 facebutton.textlabel:SetLabel("Face")
-facebutton.textlabel:SetFontHeight(16)
+facebutton.textlabel:SetFontHeight(urfontheight)
 facebutton.textlabel:SetColor(255,255,255,255)
 facebutton.textlabel:SetShadowColor(0,0,0,190)
 facebutton.textlabel:SetShadowBlur(2.0)
-
+facebutton:Handle("OnTouchDown", HighlightButton)
+facebutton:Handle("OnTouchUp", DelightButton)
 
 notificationregion=Region('region', 'notificationregion', UIParent)
 notificationregion:SetWidth(ScreenWidth())
@@ -2320,8 +2387,10 @@ end
 notificationregion:Handle("OnNetConnect", NewConnection)
 notificationregion:Handle("OnNetDisconnect", LostConnection)
 
+if false then
 StartNetAdvertise("",8888)
 StartNetDiscovery("")
+end 
 
 StartAudio()
 ShowNotification("urMus") -- Shame on me, pointless eye candy.

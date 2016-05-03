@@ -301,11 +301,12 @@ enum recordsource { SOURCE_TEXTURE, SOURCE_CAMERA, SOURCE_MOVIE };
     double totalelapsedtime;
 }
 
-@property (nonatomic, retain) CLLocationManager *locationManager;
+@property (nonatomic, strong) CLLocationManager *locationManager;
 @property (nonatomic, retain) EAGLContext *context;
 @property NSTimeInterval animationInterval;
 @property(nonatomic,retain) NSNetService* netService;
 @property(retain) CaptureSessionManager *captureManager;
+@property (nonatomic, strong) NSMutableArray *accessibleElements;
 
 //- (id)initWithFrame:(CGRect)frame andContextSharegroup:(EAGLSharegroup*)passedSharegroup;
 - (id)initWithFrame:(CGRect)frame andContextSharegroup:(EAGLContext*)passedContext;

@@ -30,6 +30,7 @@ extern RMutex luamutex;
 //------------------------------------------------------------------------------
 pthread_mutex_t fb_mutex = PTHREAD_MUTEX_INITIALIZER; // Flowbox, safeguards freeing flowboxes
 pthread_mutex_t r_mutex = PTHREAD_MUTEX_INITIALIZER; // Region, safeguards freeing regions
+pthread_mutex_t n_mutex = PTHREAD_MUTEX_INITIALIZER; // Network threat safety
 
 //------------------------------------------------------------------------------
 // MUMO Audio Callbacks
@@ -101,6 +102,9 @@ static size_t read_callback(void *ptr, size_t size, size_t nmemb, void *stream)
 extern EAGLView* g_glView;
 extern int SCREEN_WIDTH;
 extern int SCREEN_HEIGHT;
+extern int TOUCH_SCREEN_WIDTH;
+extern int TOUCH_SCREEN_HEIGHT;
+extern bool portrait;
 
 // This is to transport error and print messages to EAGLview
 extern std::string errorstr;
@@ -184,7 +188,7 @@ const char* urEventNames[] = { "OnDragStart", "OnDragStop", "OnHide", "OnShow", 
 #ifdef SOAR_SUPPORT
     "OnSoarOutput",
 #endif
-    "OnAccelerate", "OnAttitude", "OnRotation", "OnHeading", "OnLocation", "OnMicrophone", "OnHorizontalScroll", "OnVerticalScroll", "OnMove", "OnPageEntered", "OnPageLeft", "OnKeyboard", "OnKeyboardBackspace",
+    "OnAccelerate", "OnAttitude", "OnRotation", "OnHeading", "OnLocation", "OnMicrophone", "OnHorizontalScroll", "OnVerticalScroll", "OnMove", "OnPageEntered", "OnPageLeft", "OnDragging", "OnKeyboard", "OnKeyboardBackspace",
 };
 
 
@@ -306,14 +310,25 @@ void RemoveEventRegistry(lua_State* lua, enum eventIDs event, urAPI_Region_t* re
 // Event Service functions (single region argument calls)
 //------------------------------------------------------------------------------
 
-bool callScriptWithOscArgs(enum eventIDs event, int func_ref, urAPI_Region_t* region, osc::ReceivedMessageArgumentStream & s)
+void lock_events()
+{
+    pthread_mutex_lock( &n_mutex );
+}
+
+void unlock_events()
+{
+    pthread_mutex_unlock( &n_mutex );
+}
+
+bool callScriptWithOscArgs(enum eventIDs event, int func_ref, urAPI_Region_t* region, osc::ReceivedMessageArgumentStream & s, osc::ReceivedMessage::const_iterator & arg)
 {
 	if(func_ref == 0) return false;
-	
+    
 	// Call lua function by stored Reference
 	lua_rawgeti(lua,LUA_REGISTRYINDEX, func_ref);
 	lua_rawgeti(lua,LUA_REGISTRYINDEX, region->tableref);
 	int len = 0;
+    
 	while(!s.Eos())
 	{
 		float num;
@@ -330,6 +345,7 @@ bool callScriptWithOscArgs(enum eventIDs event, int func_ref, urAPI_Region_t* re
 		errorstr = eventstr+error; // DPrinting errors for now
 		newerror = true;
         ur_Log(errorstr.c_str());
+        pthread_mutex_unlock( &n_mutex );
 		return false;
 	}
 	
@@ -527,14 +543,44 @@ bool callScriptWith1String(enum eventIDs event, int func_ref, urAPI_Region_t* re
 	lua_rawgeti(lua,LUA_REGISTRYINDEX, func_ref);
 	lua_rawgeti(lua,LUA_REGISTRYINDEX, region->tableref);
 	lua_pushstring(lua, name);
-	if(lua_pcall(lua,2,0,0) != 0)
+    int perror = lua_pcall(lua,2,0,0);
+	if( perror != 0)
 	{
 		//<return Error>
+        if(perror == LUA_ERRRUN){
 		const char* error = lua_tostring(lua, -1);
         std::string eventstr(urEventNames[event]);
-		errorstr = eventstr+": "+error; // DPrinting errors for now
+        if(error != NULL)
+            errorstr = eventstr+": "+error; // DPrinting errors for now
+        else
+            errorstr = eventstr+": "+"Null Error";
 		newerror = true;
         ur_Log(errorstr.c_str());
+        }
+        else if (perror == LUA_ERRMEM)
+        {
+            std::string eventstr(urEventNames[event]);
+            errorstr = eventstr+": "+"LUA_ERRMEM"; // DPrinting errors for now
+            newerror = true;
+            ur_Log(errorstr.c_str());
+            
+        }
+        else if (perror == LUA_ERRERR)
+        {
+            std::string eventstr(urEventNames[event]);
+            errorstr = eventstr+": "+"LUA_ERRERR"; // DPrinting errors for now
+            newerror = true;
+            ur_Log(errorstr.c_str());
+            
+        }
+        else
+        {
+            std::string eventstr(urEventNames[event]);
+            errorstr = eventstr+": "+"LUA_UNKNOWNERROR"; // DPrinting errors for now
+            newerror = true;
+            ur_Log(errorstr.c_str());
+            
+        }
 		return false;
 	}
 	
@@ -595,6 +641,7 @@ bool callScript(enum eventIDs event, int func_ref, urAPI_Region_t* region)
 
 bool callAllEvents(enum eventIDs event)
 {
+    lock_events();
     if(EventChain[event].first != NULL)
     {
         EventChain[event].next = EventChain[event].first->next; // Helps save-guard the EventChain[event] should a region unhook itself
@@ -609,6 +656,7 @@ bool callAllEvents(enum eventIDs event)
                 EventChain[event].next = EventChain[event].next->next;
         }
     }
+    unlock_events();
 	return true;
 }
 
@@ -634,6 +682,7 @@ bool callAllOn1Args(enum eventIDs event, float data)
 
 bool callAllOn1Char(enum eventIDs event, const char *data)
 {
+    lock_events();
     if(EventChain[event].first != NULL)
     {
         EventChain[event].next = EventChain[event].first->next; // Helps save-guard the EventChain[event] should a region unhook itself
@@ -648,12 +697,14 @@ bool callAllOn1Char(enum eventIDs event, const char *data)
                 EventChain[event].next = EventChain[event].next->next;
         }
     }
+    unlock_events();
 	return true;
     
 }
 
 bool callAllOn1Global(enum eventIDs event, const char* data)
 {
+    lock_events();
     if(EventChain[event].first != NULL)
     {
         EventChain[event].next = EventChain[event].first->next; // Helps save-guard the EventChain[event] should a region unhook itself
@@ -668,12 +719,14 @@ bool callAllOn1Global(enum eventIDs event, const char* data)
                 EventChain[event].next = EventChain[event].next->next;
         }
     }
+    unlock_events();
 	return true;
     
 }
 
 bool callAllOn2Args(enum eventIDs event, float data, float data2)
 {
+    lock_events();
     if(EventChain[event].first != NULL)
     {
         EventChain[event].next = EventChain[event].first->next; // Helps save-guard the EventChain[event] should a region unhook itself
@@ -688,12 +741,14 @@ bool callAllOn2Args(enum eventIDs event, float data, float data2)
                 EventChain[event].next = EventChain[event].next->next;
         }
     }
+    unlock_events();
 	return true;
     
 }
 
 bool callAllOn3Args(enum eventIDs event, float data, float data2, float data3)
 {
+    lock_events();
     if(EventChain[event].first != NULL)
     {
         EventChain[event].next = EventChain[event].first->next; // Helps save-guard the EventChain[event] should a region unhook itself
@@ -708,12 +763,14 @@ bool callAllOn3Args(enum eventIDs event, float data, float data2, float data3)
                 EventChain[event].next = EventChain[event].next->next;
         }
     }
+    unlock_events();
 	return true;
     
 }
 
 bool callAllOn4Args(enum eventIDs event, float data, float data2, float data3, float data4)
 {
+    lock_events();
     if(EventChain[event].first != NULL)
     {
         EventChain[event].next = EventChain[event].first->next; // Helps save-guard the EventChain[event] should a region unhook itself
@@ -728,12 +785,14 @@ bool callAllOn4Args(enum eventIDs event, float data, float data2, float data3, f
                 EventChain[event].next = EventChain[event].next->next;
         }
     }
+    unlock_events();
 	return true;
     
 }
 
 bool callAllOn1String(enum eventIDs event, const char* data)
 {
+    lock_events();
     if(EventChain[event].first != NULL)
     {
         EventChain[event].next = EventChain[event].first->next; // Helps save-guard the EventChain[event] should a region unhook itself
@@ -748,11 +807,13 @@ bool callAllOn1String(enum eventIDs event, const char* data)
                 EventChain[event].next = EventChain[event].next->next;
         }
     }
+    unlock_events();
 	return true;
 }
 
 bool callAllOn2Strings(enum eventIDs event, const char* data, const char* data2)
 {
+    lock_events();
     if(EventChain[event].first != NULL)
     {
         EventChain[event].next = EventChain[event].first->next; // Helps save-guard the EventChain[event] should a region unhook itself
@@ -767,11 +828,14 @@ bool callAllOn2Strings(enum eventIDs event, const char* data, const char* data2)
                 EventChain[event].next = EventChain[event].next->next;
         }
     }
+    unlock_events();
 	return true;
 }
 
-bool callAllOnOSCArgs(enum eventIDs event, osc::ReceivedMessageArgumentStream & argument_stream)
+bool callAllOnOSCArgs(enum eventIDs event, osc::ReceivedMessageArgumentStream & argument_stream, osc::ReceivedMessage::const_iterator & arg)
 {
+    lock_events();
+    
     if(EventChain[event].first != NULL)
     {
         EventChain[event].next = EventChain[event].first->next; // Helps save-guard the EventChain[event] should a region unhook itself
@@ -780,12 +844,14 @@ bool callAllOnOSCArgs(enum eventIDs event, osc::ReceivedMessageArgumentStream & 
         while(EventChain[event].next != NULL)
         {
             urAPI_Region_t* t = EventChain[event].next->region;
-            callScriptWithOscArgs(event,t->OnEvents[event],t,argument_stream);
+            callScriptWithOscArgs(event,t->OnEvents[event],t,argument_stream, arg);
             EventChain[event].next = EventChain[event].next;
             if(EventChain[event].next != NULL)
                 EventChain[event].next = EventChain[event].next->next;
         }
     }
+    unlock_events();
+    
 	return true;
     
 }
@@ -796,13 +862,16 @@ bool callAllOnOSCArgs(enum eventIDs event, osc::ReceivedMessageArgumentStream & 
 
 bool callAllOnUpdate(float time)
 {
+    lock_events();
     callAllOn1Args(OnUpdate, time);
+    unlock_events();
 	return true;
 }
 
 #ifdef SOAR_SUPPORT
 bool callAllOnSoarOutput()
 {
+    lock_events();
     enum eventIDs event = OnSoarOutput;
     
     if(EventChain[event].first != NULL)
@@ -847,6 +916,7 @@ bool callAllOnSoarOutput()
                 EventChain[event].prev = EventChain[event].prev->next;
         }
     }
+    unlock_events();
     return true;
 }
 #endif
@@ -854,12 +924,14 @@ bool callAllOnSoarOutput()
 bool callAllOnPageEntered(float page)
 {
     callAllOn1Args(OnPageEntered, page);
+
 	return true;
 }
 
 bool callAllOnPageLeft(float page)
 {
     callAllOn1Args(OnPageLeft, page);
+
 	return true;
 }
 
@@ -892,87 +964,105 @@ bool callScriptWith2ActionTableArgs(enum eventIDs event, int func_ref, urAPI_Reg
 bool callAllOnLocation(float latitude, float longitude)
 {
     callAllOn2Args(OnLocation, latitude, longitude);
+
 	return true;
 }
 
 bool callAllOnHeading(float x, float y, float z, float north)
 {
     callAllOn4Args(OnHeading,x,y,z,north);
-	return true;
+
+    return true;
 }
 
 bool callAllOnAttitude(float x, float y, float z, float w)
 {
     callAllOn4Args(OnAttitude, x,y,z,w);
-	return true;
+
+    return true;
 }
 
 bool callAllOnRotRate(float x, float y, float z)
 {
     callAllOn3Args(OnRotation, x,y,z);
-	return true;
+
+    return true;
 }
 
 bool callAllOnAccelerate(float x, float y, float z)
 {
     callAllOn3Args(OnAccelerate, x,y,z);
-	return true;
+
+    return true;
 }
 
 bool callAllOnNetIn(float a)
 {
+    lock_events();
     callAllOn1Args(OnNetIn, a);
-	return true;
+    unlock_events();
+
+    return true;
 }
 
 bool callAllOnNetConnect(const char* name, const char* btype)
 {
     callAllOn2Strings(OnNetConnect, name, btype);
-	return true;	
+
+    return true;
 }
 
 bool callAllOnNetDisconnect(const char* name, const char* btype)
 {
     callAllOn2Strings(OnNetDisconnect, name, btype);
-	return true;		
+
+    return true;
 }
 
 // Shared event for different argument types.
-bool callAllOnOSCMessage(osc::ReceivedMessageArgumentStream & argument_stream)
+bool callAllOnOSCMessage(osc::ReceivedMessageArgumentStream & argument_stream, osc::ReceivedMessage::const_iterator & arg)
 {
-    callAllOnOSCArgs(OnOSCMessage, argument_stream);
-	return true;		
+    callAllOnOSCArgs(OnOSCMessage, argument_stream, arg);
+
+    return true;
 }
 
 // Shared event for different argument types.
 bool callAllOnOSCString(const char* str)
 {
     callAllOn1String(OnOSCMessage, str);
-	return true;		
+
+    return true;
 }
 
 #ifdef SANDWICH_SUPPORT
 bool callAllOnPressure(float p)
 {
+    lock_events();
     callAllOn1Args(OnPressure, p);
-	return true;
+    unlock_events();
+
+    return true;
 }
 #endif
 
 bool callAllOnKeyboard(const char *c)
 {
     callAllOn1Char(OnKeyboard, c);
+
     return true;
 }
 
 bool callAllOnKeyboardBackspace()
 {
     callAllEvents(OnKeyboardBackspace);
+
     return true;
 }
 
 bool callAllOnMicrophone(SInt32* mic_buffer, UInt32 bufferlen)
 {
+    lock_events();
 	lua_getglobal(lua, "urMicData");
 	if(lua_isnil(lua, -1) || !lua_istable(lua,-1)) // Channel doesn't exist or is falsely set up
 	{
@@ -987,6 +1077,7 @@ bool callAllOnMicrophone(SInt32* mic_buffer, UInt32 bufferlen)
 	}	
 	lua_setglobal(lua, "urMicData");
     
+    unlock_events();
     callAllOn1Global(OnMicrophone, "urMicData");
 	return true;
 }
@@ -1004,8 +1095,8 @@ urAPI_Region_t* findRegionHit(float x, float y)
 			if(t->isClipping==false || (x >= t->clipleft && x <= t->clipleft+t->clipwidth &&
 										y >= t->clipbottom && y <= t->clipbottom+t->clipheight))
 			{
-				t->lastinputx = x - t->left;
-				t->lastinputy = y - t->bottom;
+//				t->lastinputx = x - t->left; GESSL: Check reason why removed (Android->iOS new pinching code)
+//				t->lastinputy = y - t->bottom;
 				return t;
 			}
 	}
@@ -1452,6 +1543,116 @@ bool layout(urAPI_Region_t* region)
 	return update;
 	
 }
+
+// Compute the relative anchor coordinate from left/bottom screen coordinates. Allows to reanchor regions to other regions or input positions
+
+void reanchor(urAPI_Region_t* region)
+{
+	if (region == nil)
+		return;
+    
+	/*	if(region->textlabel!=NULL)
+	 region->textlabel->updatestring = true; */
+    
+	float left, right, top, bottom, width, height, cx, cy, x, y;
+    
+	left = right = top = bottom = width = height = cx = cy = x = y = -1000000;
+    
+	const char* point = region->point;
+	if (point == nil)
+		point = DEFAULT_RPOINT;
+    
+	urAPI_Region_t* relativeRegion = region->relativeRegion;
+	if (relativeRegion == nil)
+		relativeRegion = region->parent;
+	if (relativeRegion == nil)
+		relativeRegion = UIParent; // This should be another layer but we don't care for now
+    
+	const char* relativePoint = region->relativePoint;
+	if (relativePoint == nil)
+		relativePoint = DEFAULT_RPOINT;
+    
+	if (!strcmp(relativePoint, "ALL")) {
+		left = relativeRegion->left;
+		bottom = relativeRegion->bottom;
+		width = relativeRegion->width;
+		height = relativeRegion->height;
+	} else if (!strcmp(relativePoint, "TOPLEFT")) {
+		x = relativeRegion->left;
+		y = relativeRegion->top;
+	} else if (!strcmp(relativePoint, "TOPRIGHT")) {
+		x = relativeRegion->right;
+		y = relativeRegion->top;
+	} else if (!strcmp(relativePoint, "TOP")) {
+		x = relativeRegion->cx;
+		y = relativeRegion->top;
+	} else if (!strcmp(relativePoint, "LEFT")) {
+		x = relativeRegion->left;
+		y = relativeRegion->cy;
+	} else if (!strcmp(relativePoint, "RIGHT")) {
+		x = relativeRegion->right;
+		y = relativeRegion->cy;
+	} else if (!strcmp(relativePoint, "CENTER")) {
+		x = relativeRegion->cx;
+		y = relativeRegion->cy;
+	} else if (!strcmp(relativePoint, "BOTTOMLEFT")) {
+		x = relativeRegion->left;
+		y = relativeRegion->bottom;
+	} else if (!strcmp(relativePoint, "BOTTOMRIGHT")) {
+		x = relativeRegion->right;
+		y = relativeRegion->bottom;
+	} else if (!strcmp(relativePoint, "BOTTOM")) {
+		x = relativeRegion->cx;
+		y = relativeRegion->bottom;
+	} else {
+		// Error!!
+		luaL_error(lua, "Unknown relativePoint when layouting regions.");
+		return;
+	}
+    
+	float ofsx = 0.0;
+	float ofsy = 0.0;
+    //	x = x + region->ofsx;
+    //	y = y + region->ofsy;
+    
+	if (!strcmp(point, "TOPLEFT")) {
+		ofsx = region->left - x;
+		ofsy = region->top - y;
+	} else if (!strcmp(point, "TOPRIGHT")) {
+		ofsx = region->right - x;
+		ofsy = region->top - y;
+	} else if (!strcmp(point, "TOP")) {
+		ofsx = region->cx - x;
+		ofsy = region->top - y;
+	} else if (!strcmp(point, "LEFT")) {
+		ofsx = region->left - x;
+		ofsy = region->cy - y; // Another typo here
+	} else if (!strcmp(point, "RIGHT")) {
+		ofsx = region->right - x;
+		ofsy = region->cy - y;
+	} else if (!strcmp(point, "CENTER")) {
+		ofsx = region->cx - x;
+		ofsy = region->cy - y;
+	} else if (!strcmp(point, "BOTTOMLEFT")) {
+		ofsx = region->left - x;
+		ofsy = region->bottom - y;
+	} else if (!strcmp(point, "BOTTOMRIGHT")) {
+		ofsx = region->right - x;
+		ofsy = region->bottom - y;
+	} else if (!strcmp(point, "BOTTOM")) {
+		ofsx = region->cx - x;
+		ofsy = region->bottom - y;
+	} else {
+		// Error!!
+		luaL_error(lua, "Unknown relativePoint when layouting regions.");
+		return;
+	}
+    
+	region->ofsx = ofsx;
+	region->ofsy = ofsy;
+}
+
+
 
 //------------------------------------------------------------------------------
 // Our custom lua API
@@ -2375,7 +2576,8 @@ int region_MoveToTop(lua_State* lua)
 		else 
 			firstRegion[currentPage] = region->next;
 
-		region->next->prev = region->prev;
+//        if(region->next != nil)
+            region->next->prev = region->prev;
 		// and make last
 		lastRegion[currentPage]->next = region;
 		region->prev = lastRegion[currentPage];
@@ -4333,8 +4535,10 @@ int flowbox_SetPushLink(lua_State *lua)
 		return 0;
 	}
 	
+    pthread_mutex_lock( &fb_mutex );
 	fb->object->AddPushOut(outindex, &target->object->ins[inindex]);
-    if(fb->object == cameraObject)
+    pthread_mutex_unlock( &fb_mutex );
+   if(fb->object == cameraObject)
     {
         incCameraUse();
     }
@@ -4348,8 +4552,10 @@ int flowboxout_SetPush(lua_State *lua)
 	ursAPI_FlowBox_Port_t* fbout = checkflowboxport(lua, 1);
 	ursAPI_FlowBox_Port_t* targetin = checkflowboxport(lua, 2);
 
+    pthread_mutex_lock( &fb_mutex );
     fbout->object->AddPushOut(fbout->index, &targetin->object->ins[targetin->index]);
-    if(fbout->object == cameraObject)
+    pthread_mutex_unlock( &fb_mutex );
+   if(fbout->object == cameraObject)
     {
         incCameraUse();
     }
@@ -4358,6 +4564,8 @@ int flowboxout_SetPush(lua_State *lua)
 
 void AddPull(ursObject* src, int inindex, ursObject* target, int outindex)
 {
+    pthread_mutex_lock( &fb_mutex );
+
 	src->AddPullIn(inindex, &target->outs[outindex]);
     
     /*
@@ -4370,6 +4578,8 @@ void AddPull(ursObject* src, int inindex, ursObject* target, int outindex)
 	if(!strcmp(src->name,netobject->name)) // This is hacky and should be done differently. Namely in the sink pulling
 		urActiveNetTickSinkList.AddSink(&target->outs[outindex]);
      */
+    pthread_mutex_unlock( &fb_mutex );
+
 }
 
 int flowbox_SetPullLink(lua_State *lua)
@@ -4465,7 +4675,9 @@ int flowbox_RemovePushLink(lua_State *lua)
 		return 0;
 	}
 	
+    pthread_mutex_lock( &fb_mutex );
 	fb->object->RemovePushOut(outindex, &target->object->ins[inindex]);
+    pthread_mutex_unlock( &fb_mutex );
     if(fb->object == cameraObject)
     {
         decCameraUse();
@@ -4480,8 +4692,10 @@ int flowboxout_RemovePush(lua_State *lua)
 	ursAPI_FlowBox_Port_t* fbout = checkflowboxport(lua, 1);
 	ursAPI_FlowBox_Port_t* targetin = checkflowboxport(lua, 2);
 	
+    pthread_mutex_lock( &fb_mutex );
 	fbout->object->RemovePushOut(fbout->index, &targetin->object->ins[targetin->index]);
-    if(fbout->object == cameraObject)
+    pthread_mutex_unlock( &fb_mutex );
+   if(fbout->object == cameraObject)
     {
         decCameraUse();
     }
@@ -4492,7 +4706,9 @@ int flowboxout_RemovePush(lua_State *lua)
 
 void RemovePull(ursObject* src, int inindex, ursObject* target, int outindex)
 {
+    pthread_mutex_lock( &fb_mutex );
 	src->RemovePullIn(inindex, &target->outs[outindex]);
+    pthread_mutex_unlock( &fb_mutex );
 
 	/*
 	if(!strcmp(src->name,dacobject->name)) // This is hacky and should be done differently. Namely in the sink pulling
@@ -4866,6 +5082,38 @@ char * ur_GetLog(int since, int *nlog) {
 // Global urMus lua API function implementations
 //------------------------------------------------------------------------------
 
+// stackDump - to print out what's in stack for debugging purpose
+// ---- added by Sang
+
+static void stackDump (lua_State *L) {
+    int i;
+    int top = lua_gettop(L);
+    printf("stackDump:\n");
+    for (i = 1; i <= top; i++) {  /* repeat for each level */
+        int t = lua_type(L, i);
+        switch (t) {
+                
+            case LUA_TSTRING:  /* strings */
+                printf("`%s'", lua_tostring(L, i));
+                break;
+                
+            case LUA_TBOOLEAN:  /* booleans */
+                printf(lua_toboolean(L, i) ? "true" : "false");
+                break;
+                
+            case LUA_TNUMBER:  /* numbers */
+                printf("%g", lua_tonumber(L, i));
+                break;
+                
+            default:  /* other values */
+                printf("%s", lua_typename(L, t));
+                break;
+                
+        }
+        printf("  ");  /* put a separator */
+    }
+    printf("\n");  /* end the listing */
+}
 //------------------------------------------------------------------------------
 // Debug Printing
 //------------------------------------------------------------------------------
@@ -4881,6 +5129,298 @@ int l_DPrint(lua_State* lua)
 	}
 	return 0;
 }
+
+#define RETURN_STRING_SIZE 25
+#define RETURN_BUFFER_SIZE 8000
+
+
+int urMus_return_length = RETURN_STRING_SIZE;
+
+void assert_length(int size, int length){
+  //  printf("size:%d, length:%d\n", size, length);
+    assert(size > length);
+
+}
+//------------------------------------------------------------------------------
+// Generate XMl for Element in Table
+//------------------------------------------------------------------------------
+
+int l_ElemToXml(lua_State* lua)
+{
+    int type = lua_type(lua, -1);
+    const char *strNull = "null";
+    const char *value = NULL;
+    const char *strType = NULL;
+    int length = strlen(lua_typename(lua, type)) + 100;
+//    const char
+  //  printf("type name : %s, %s\n", lua_typename(lua, type), lua_tostring(lua, -1));
+    
+/*    if ( lua_tostring(lua, -1) == NULL)
+    {
+        luaL_error(lua, "ElemToXml(): %s, the argument is not a valid expression", lua_typename(lua, type));
+        return 0;
+    }
+*/
+    if (lua_type(lua,-1) == LUA_TBOOLEAN)
+    {
+        if (lua_toboolean(lua, -1))
+            value = "true";
+        else
+            value = "false";
+    }
+    else if (lua_type(lua, -1) == LUA_TTABLE) // to differentiate region
+    {
+        lua_pushstring(lua, "Texture"); // stack now contains: -1 => "Texture"; -2 => table;
+        lua_gettable(lua, -2); // stack now contains : -1 => nil (if it is not region) or function (if it is a region)
+        if (lua_isfunction(lua, -1))
+        {
+            strType = "region";
+        }
+        lua_pop(lua, 1);
+        
+        lua_pushstring(lua, "IsInstantiable"); // stack now contains: -1 => "IsInstantiable"; -2 => table;
+        lua_gettable(lua, -2); // stack now contains : -1 => nil (if it is not flowbox) or function (if it is a region)
+        if (lua_isfunction(lua, -1))
+        {
+            strType = "flowbox";
+            lua_pop(lua,1);
+            flowbox_Name(lua);
+            value = lua_tostring(lua, -1);
+        }
+        lua_pop(lua, 1);
+    }
+    else if (lua_type(lua, -1) == LUA_TUSERDATA) // to differentiate region
+    {
+        lua_pushstring(lua, "SetTexture"); // stack now contains: -1 => "SetTexture"; -2 => userdata;
+        lua_gettable(lua, -2); // stack now contains : -1 => nil (if it is not texture) or function (if it is a region)
+        if (lua_isfunction(lua, -1))
+        {
+            strType = "texture";
+        }
+        lua_pop(lua, 1);
+        lua_pushstring(lua, "SetLabel"); // stack now contains: -1 => "SetLabel"; -2 => userdata;
+        lua_gettable(lua, -2); // stack now contains : -1 => nil (if it is not text label) or function (if it is a region)
+        if (lua_isfunction(lua, -1))
+        {
+            strType = "text label";
+            lua_pop(lua,1);
+            textlabel_Label(lua);
+            value = lua_tostring(lua, -1);
+        }
+        lua_pop(lua, 1);
+    }
+    else{
+        value = lua_tostring(lua, -1);
+    }
+    
+    if (value)
+        length += strlen(value);
+    else
+        length += strlen(strNull);
+    
+    char * str_return = (char *)malloc(length * sizeof(char));
+    strcpy(str_return, "<e><t>");
+    assert_length(length, strlen(str_return));
+    if (strType)
+        strcat(str_return, strType);
+    else
+        strcat(str_return, lua_typename(lua, type));
+    assert_length(length, strlen(str_return));
+    strcat(str_return, "</t><v>");
+    assert_length(length, strlen(str_return));
+    if (value)
+        strcat(str_return, value);
+    else
+        strcat(str_return, strNull);
+    assert_length(length, strlen(str_return));
+    strcat(str_return, "</v></e>");
+    assert_length(length, strlen(str_return));
+    
+    lua_pushstring(lua, str_return);
+    //   lua_setglobal(lua,"__urMusReturn");
+    
+    free( (void *)str_return);
+    return 1;
+    
+}
+
+
+//------------------------------------------------------------------------------
+// Generate XMl for Table
+//------------------------------------------------------------------------------
+
+int l_TableToXml(lua_State* lua)
+{
+    int iType = lua_type(lua, -1);
+    int kType;
+    if (!lua_istable(lua, -1)){
+        luaL_error(lua, "TableToXml(): %s, not a valid table", lua_typename(lua, iType));
+        return 0;
+    }
+    // convert table into a string
+    int return_str_size = RETURN_STRING_SIZE;
+    char * str_return = (char *)malloc(return_str_size * sizeof(char));
+    lua_pushvalue(lua,-1);
+    /* table is in the stack at index 't' */
+    lua_pushnil(lua);  /* first key*/
+    const char * start  = "<lua_table>\n";
+    const char * end  = "</lua_table>";
+    const char * strNull = "null";
+    const char * element_key  = "<e><k>";
+    const char * key_keytype  = "</k><kt>";
+    const char * keytype_type = "</kt><t>";
+    const char * type_value = "</t><v>";
+    const char * value_element = "</v></e>\n";
+    strcpy(str_return,start);
+
+    int tag_length = strlen(element_key) + strlen(key_keytype) + strlen(keytype_type) + strlen(type_value) + strlen(value_element);
+    
+    int prev_length  = return_str_size;
+#ifdef SANGDEBUG
+    printf("l_TableToXml start\n");
+#endif  
+    int prev_chunk_length = 0;
+
+    // SNAG :  this itereating table code is from http://stackoverflow.com/questions/6137684/iterate-through-lua-table
+    while (lua_next(lua, -2) != 0) {
+        lua_pushvalue(lua, -2);
+        // stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
+        kType = lua_type(lua,-1);
+        const char *key = lua_tostring(lua, -1);
+        iType = lua_type(lua, -2);
+        const char *value = lua_tostring(lua, -2);
+        const char *type = lua_typename(lua, iType);
+        const char *strKeyType = lua_typename(lua, kType);
+        
+        if (iType == LUA_TBOOLEAN)
+        {
+            if (lua_toboolean(lua, -2   ))
+                value = "true";
+            else
+                value = "false";
+        }
+        
+        //urAPI specific
+ /*       if (iType == LUA_TTABLE){
+            lua_pushstring(lua, "Texture")  ; // stack now contains: -1 => "Texture"; -2 => key; -3 => value; -4 => key; -5 => table
+            lua_gettable(lua, -3); // stack now contains : -1 => nil (if it is not region) or function (if it is a region)
+            if (lua_isfunction(lua, -1))
+            {
+                type = "region";
+            }
+            lua_pop(lua, 1);
+        }
+      */  // came back to  // stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
+
+#ifdef SANGDEBUG
+        printf("key:%s, keyType:%s, value:%s, type:%s\n", key,strKeyType, value, type);
+#endif
+        int cat_length=strlen(end) + 10; // 10 for cushion size.
+        if (value)
+            cat_length += strlen(value);
+        else
+            cat_length += strlen(strNull);
+            
+        cat_length += strlen(str_return) + strlen(key) + strlen(type) + strlen(strKeyType) +  tag_length ;
+        //   printf("str_return:%s\n",str_return);
+      
+        if ( strlen(str_return) +cat_length - prev_chunk_length  >= RETURN_BUFFER_SIZE)
+        {
+            luaL_error(lua, "Table is too long to transfer. ");
+            break;
+        }
+        
+        while ( cat_length >= return_str_size){
+            return_str_size *=2;
+        }
+        
+        if ( prev_length != return_str_size){
+            char * new_str_return = (char *)malloc(return_str_size * sizeof(char));
+            strcpy(new_str_return, str_return);
+            int test1 = strlen(new_str_return);
+            int test2 = strlen(str_return);
+#ifdef SANGDEBUG
+        printf("%d, %d, %d, %d, %d\n", prev_length, return_str_size, cat_length, test1, test2);
+#endif
+            free((void *)str_return);
+            str_return = new_str_return;
+            prev_length  = return_str_size;
+        }
+        assert_length(return_str_size, strlen(str_return));
+        strcat(str_return,element_key);
+        assert_length(return_str_size, strlen(str_return));
+        strcat(str_return,key);
+        assert_length(return_str_size, strlen(str_return));
+        strcat(str_return,key_keytype);
+        assert_length(return_str_size, strlen(str_return));
+        strcat(str_return,strKeyType);
+        assert_length(return_str_size, strlen(str_return));
+        strcat(str_return,keytype_type);
+        assert_length(return_str_size, strlen(str_return));
+        strcat(str_return,type);
+        assert_length(return_str_size, strlen(str_return));
+        strcat(str_return,type_value);
+        assert_length(return_str_size, strlen(str_return));
+        if (iType != LUA_TTABLE && value){
+            strcat(str_return,value);
+        }
+        else
+            strcat(str_return, strNull);
+        assert_length(return_str_size, strlen(str_return));
+        /*   else{
+         const char * subTableXML = lua_table_to_xml(lua, -2);
+         cat_length += strlen(subTableXML) + strlen(str_return) + 10;
+         while ( cat_length >= return_str_size){
+         return_str_size *=2;
+         }
+         if ( prev_length != return_str_size){
+         char * new_str_return = (char *)malloc(return_str_size * sizeof(char));
+         strcpy(new_str_return, str_return);
+         delete[] str_return;
+         str_return = new_str_return;
+         prev_length  = return_str_size;
+         }
+         
+         strcat(str_return,subTableXML);
+         free((void *)subTableXML);
+         }*/
+        strcat(str_return,value_element);
+        assert_length(return_str_size, strlen(str_return));
+        
+        //"%s(%s) => %s\n", key,lua_typename(lua, lua_type(lua, -2)), value);
+        // pop value + copy of key, leaving original key
+        lua_pop(lua, 2);
+        // stack now contains: -1 => key; -2 => table
+    }
+    // stack now contains: -1 => table (when lua_next returns 0 it pops the key
+    // but does not push anything.)
+    strcat(str_return,end);
+    assert_length(return_str_size, strlen(str_return));
+ //   lua_pop(lua, 1);
+  
+    lua_pushstring(lua, str_return);
+ //   lua_setglobal(lua,"__urMusReturn");
+
+    free( (void *)str_return);
+    return 1;
+}
+
+
+//------------------------------------------------------------------------------
+// return string via httpServer
+//------------------------------------------------------------------------------
+
+int l_NPrint(lua_State* lua)
+{
+	const char* str = luaL_checkstring(lua,1);
+    if(str!=nil)
+	{
+        lua_pushstring(lua, str);
+        lua_setglobal(lua,"__urMusReturn");
+    }
+	return 0;
+}
+
 
 //------------------------------------------------------------------------------
 // Region-related global API
@@ -4973,6 +5513,8 @@ static int l_Region(lua_State *lua)
 	myregion->isDragged = false;
 	myregion->isClamped = false;
 	myregion->isClipping = false;
+    
+    myregion->numinputs = 0;
 	
 #ifdef SOAR_SUPPORT
     myregion->soarKernel = NULL;
@@ -5210,20 +5752,27 @@ int l_HTTPServer(lua_State *lua)
 //------------------------------------------------------------------------------
 
 MoNet myoscnet;
+MoNet myoscnet2;
 
-void oscCallBack(osc::ReceivedMessageArgumentStream & argument_stream, void * data)
+void oscCallBack(osc::ReceivedMessageArgumentStream & argument_stream, osc::ReceivedMessage::const_iterator & arg, void * data)
 {
     //	float num;
     //	argument_stream >> num;
-	callAllOnOSCMessage(argument_stream);
+	callAllOnOSCMessage(argument_stream, arg);
 }	
 
-void oscCallBack2(osc::ReceivedMessageArgumentStream & argument_stream, void * data)
+void oscCallBack2(osc::ReceivedMessageArgumentStream & argument_stream, osc::ReceivedMessage::const_iterator & arg, void * data)
 {
 	const char *str;
-	argument_stream >> str;
-	callAllOnOSCString(str);
-}	
+    try {
+        argument_stream >> str >> osc::EndMessage;
+        callAllOnOSCString(str);
+    }catch( osc::Exception& e ){
+        std::cout << "error while parsing message: "
+        << e.what() << "\n";
+    }
+
+}
 
 int l_StartOSCListener(lua_State *lua)
 {
@@ -5262,32 +5811,48 @@ int l_IPAddress(lua_State *lua)
 
 char types[255];
 
+//#define OSCLEAKDEBUG
+
 int l_SendOSCMessage(lua_State *lua)
 {
 	const char* ip = luaL_checkstring(lua,1);
 	int port = luaL_checknumber(lua,2);
 	const char* pattern = luaL_checkstring(lua,3);
+
+#ifndef OSCLEAKDEBUG
     
-	myoscnet.startSendStream(ip,port);
-	myoscnet.startSendMessage(pattern);
+//    lock_events();
+    
+	myoscnet2.startSendStream(ip,port);
+	myoscnet2.startSendMessage(pattern);
 	
 	int len = 1;
 	while (lua_isnoneornil(lua,len+3)==0)
 	{
 		if(lua_isnumber(lua, len+3)==1)
 		{
-			myoscnet.addSendFloat(luaL_checknumber(lua,len+3));
+			myoscnet2.addSendFloat(luaL_checknumber(lua,len+3));
 		}
 		else if(lua_isstring(lua, len+3)==1)
 		{
-			myoscnet.addSendString(luaL_checkstring(lua,len+3));
+			myoscnet2.addSendString(luaL_checkstring(lua,len+3));
 		}
 		// TODO: handle OSC-blob type, defined in the OSC specs
 		len = len +1;
 	}
 	
-	myoscnet.endSendMessage();
-	myoscnet.closeSendStream();
+	myoscnet2.endSendMessage();
+	myoscnet2.closeSendStream();
+    
+//    unlock_events();
+#else
+    const char ttttttt[4] ="YAR";
+    int len = 1;
+    if(lua_isnumber(lua, len+3)==1)
+        callAllOnOSCString(ttttttt);
+    else if(lua_isstring(lua, len+3)==1)
+        callAllOnOSCString(luaL_checkstring(lua,len+3));
+#endif
     
 	return 0;
 }
@@ -5801,13 +6366,33 @@ int l_SetExternalOrientation(lua_State *lua)
 {
     int num = luaL_checknumber(lua,1);
     if(num == 0)
+    {
         [[UIApplication sharedApplication] setStatusBarOrientation:UIDeviceOrientationPortrait animated:NO];
+        TOUCH_SCREEN_WIDTH = SCREEN_WIDTH;
+        TOUCH_SCREEN_HEIGHT = SCREEN_HEIGHT;
+        portrait = true;
+    }
     else if(num == 1)
+    {
         [[UIApplication sharedApplication] setStatusBarOrientation:UIInterfaceOrientationPortraitUpsideDown animated:NO];
+        TOUCH_SCREEN_WIDTH = SCREEN_WIDTH;
+        TOUCH_SCREEN_HEIGHT = SCREEN_HEIGHT;
+        portrait = true;
+   }
     else if(num == 2)
+    {
         [[UIApplication sharedApplication] setStatusBarOrientation:UIDeviceOrientationLandscapeLeft animated:NO];
+        portrait = false;
+ //       TOUCH_SCREEN_WIDTH = SCREEN_HEIGHT;
+ //       TOUCH_SCREEN_HEIGHT = SCREEN_WIDTH;
+    }
     else
+    {
         [[UIApplication sharedApplication] setStatusBarOrientation:UIDeviceOrientationLandscapeRight animated:NO];
+        portrait = false;
+//        TOUCH_SCREEN_WIDTH = SCREEN_HEIGHT;
+//        TOUCH_SCREEN_HEIGHT = SCREEN_WIDTH;
+    }
     return 0;
 }
     	
@@ -5856,6 +6441,30 @@ int l_SetTorchFlashFrequency(lua_State *lua)
 	[g_glView->captureManager setTorchToggleFrequency:freq];
 
 	return 0;
+}
+
+int l_SetTorch(lua_State *lua)
+{
+    bool ab = lua_toboolean(lua,1);
+    int toggle = ab ? 1 : 0;
+    
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    NSError *error;
+    if([device isTorchModeSupported:AVCaptureTorchModeOn] && toggle) {
+        
+        if ([device lockForConfiguration:&error]) {
+            [device setTorchMode:AVCaptureTorchModeOn];
+            [device unlockForConfiguration];
+        }
+        
+    } else if ([device isTorchModeSupported:AVCaptureTorchModeOff] && !toggle) {
+        
+        if ([device lockForConfiguration:&error]) {
+            [device setTorchMode:AVCaptureTorchModeOff];
+            [device unlockForConfiguration];
+        }
+    }
+    return 0;
 }
 
 int l_CameraFilters(lua_State *lua)
@@ -6285,6 +6894,13 @@ void l_setupAPI(lua_State *lua)
 	lua_setglobal(lua, "SetFrameRate");
 	lua_pushcfunction(lua, l_DPrint);
 	lua_setglobal(lua, "DPrint");
+    lua_pushcfunction(lua,l_TableToXml);
+	lua_setglobal(lua, "TableToXml");
+    lua_pushcfunction(lua,l_ElemToXml );
+	lua_setglobal(lua, "ElemToXml");
+    lua_pushcfunction(lua,l_NPrint );
+	lua_setglobal(lua, "NPrint");
+
 	// URSound!
 	lua_pushcfunction(lua, l_SourceNames);
 	lua_setglobal(lua, "SourceNames");
@@ -6340,6 +6956,9 @@ void l_setupAPI(lua_State *lua)
 	lua_setglobal(lua, "ActiveCamera");
 	lua_pushcfunction(lua, l_SetTorchFlashFrequency);
 	lua_setglobal(lua, "SetTorchFlashFrequency");
+   lua_pushcfunction(lua, l_SetTorch);
+   lua_setglobal(lua, "SetTorch");
+  
 	lua_pushcfunction(lua, l_SetCameraAutoBalance);
     lua_setglobal(lua, "SetCameraAutoBalance");
     lua_pushcfunction(lua, l_CameraFilters);

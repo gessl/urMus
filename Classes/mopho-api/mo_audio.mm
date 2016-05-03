@@ -563,6 +563,7 @@ bool MoAudio::init( Float64 srate, UInt32 frameSize, UInt32 numChannels )
         if( err )
         {
             // TODO: "couldn't get new audio route\n"
+            int a = 0;
         }
         
         UInt32 override;
@@ -765,6 +766,7 @@ void MoAudio::checkInput()
     if( err )
     {
         // TODO: "warning: unable to determine availability of audio input"
+        int a = 0;
     }
     else if( !has_input  )
     {

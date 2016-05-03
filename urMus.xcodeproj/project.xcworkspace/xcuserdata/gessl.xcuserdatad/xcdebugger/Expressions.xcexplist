@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "layout:urAPI.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "region-&gt;width">
+            </PersistentString>
+            <PersistentString
+               value = "region-&gt;height">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "populateFlowboxPorts(ursAPI_FlowBox*):urAPI.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "urFont::drawString:urFont.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "(char)returnpos[index].value">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "PerformThru(void*, unsigned long*, AudioTimeStamp const*, unsigned long, unsigned long, AudioBufferList*):RIOAudioUnitLayer.mm">
+         <PersistentStrings>
+            <PersistentString
+               value = "dataptr[2*i]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>

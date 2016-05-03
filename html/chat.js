@@ -6,7 +6,6 @@ urMus.chat.addUser = function() {
 	urMus.chat.username.push(alias.value);
 	urMus.chat.externalID.push(-1);
 	alias.value = "";
-    
 }
 
 
@@ -33,11 +32,11 @@ urMus.chat.postMessage = function() {
         }
         
         message = urMus.chat.internalID + "|" + encodeURIComponent(message);
-        urMus.chat.pushMessage(urMus.chat.username[0] + ": " + document.getElementById("chat_message").value);
+   //     urMus.chat.pushMessage(urMus.chat.username[0] + ": " + document.getElementById("chat_message").value);
 
 	}
 	var xhr = urMus.chat.xhr();
-	xhr.open("POST", "http://" + urMus.chat.IPAddress + ":8080/upload_script?file=" + urMus.chat.username[0] + ".chat&contents=" + message, true);
+	xhr.open("POST", "http://" + urMus.chat.IPAddress + ":8080/upload_script?file=" + urMus.chat.username[0] + ".chat.lua&contents=" + message, true);
 	xhr.send(null);
 	document.getElementById("chat_message").value = "";
 	++urMus.chat.internalID;
@@ -69,7 +68,7 @@ urMus.chat.updateLog = function() {
         
 		xhr[i] = urMus.chat.xhr();
         
-		xhr[i].open("GET", "http://" + urMus.chat.IPAddress + ":8080/open_file?dirtype=doc&file=" + urMus.chat.username[i] + ".chat", true);
+		xhr[i].open("GET", "http://" + urMus.chat.IPAddress + ":8080/open_file?dirtype=doc&file=" + urMus.chat.username[i] + ".chat.lua", true);
 		
 		xhr[i].onreadystatechange = (function(index) {
                                      
@@ -101,13 +100,13 @@ urMus.chat.updateLog = function() {
     
 }
 
-urMus.chat.init = function() {
-    
+urMus.chat.init = function(alias) {
+   // alert("chat.js it's running")
+
 	//Error check the alias in the future
-	var alias = document.getElementById("chat_alias").value;
     
-	document.getElementById("chat_post_init").style.display = "block";
-	document.getElementById("chat_pre_init").style.display = "none";
+//	document.getElementById("chat_post_init").style.display = "block";
+//	document.getElementById("chat_pre_init").style.display = "none";
     
 	urMus.chat.username = new Array();
 	urMus.chat.externalID = new Array();

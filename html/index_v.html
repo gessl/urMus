@@ -1,0 +1,159 @@
+
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+
+    <title>urMus: Remote Lua Editor Ver 2.3</title>
+    <link rel="stylesheet" href="./newCodeMirror/lib/codemirror.css">
+    <script src="./js/jquery-1.8.3.js"></script>
+    <script src="./js/jquery-ui-1.9.2.custom.min.js"></script>
+    <!--                <script src="jquery-1.4.2.min.js" type="text/javascript" charset="utf-8"></script>-->
+    <script src="js/ajaxupload.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jplayer/jquery.jplayer.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jqueryFileTree.js" type="text/javascript" charset="utf-8"></script>
+
+    <script src="./newCodeMirror/lib/codemirror.js"></script>
+    <script src="main_v.js" type="text/javascript" charset="utf-8"></script>
+    <script src="./newCodeMirror/mode/lua/lua.js" type="text/javascript" charset="utf-8"></script>
+    <!--    <link rel="stylesheet" href="./newCodeMirror/doc/docs.css">-->
+    <link rel="stylesheet" href="css/jquery.qtip.css" type="text/css" charset="utf-8">
+    <link rel="stylesheet" href="css/main.css" type="text/css" charset="utf-8">
+    <link rel="stylesheet" href="./newCodeMirror/lib/codemirror.css">
+    <link href="./css/cupertino/jquery-ui-1.9.2.custom.min.css" rel="stylesheet" type="text/css"/>
+    <link type="text/css" href="jquery.ui.chatbox.css" rel="stylesheet" />
+    <script type="text/javascript" src="jquery.ui.chatbox.js"></script>
+    <style type="text/css">
+    .CodeMirror {border-top: 1px solid #eee; border-bottom: 1px solid #eee;}
+    .cm-tab {
+        background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAMCAYAAAAkuj5RAAAAAXNSR0IArs4c6QAAAGFJREFUSMft1LsRQFAQheHPowAKoACx3IgEKtaEHujDjORSgWTH/ZOdnZOcM/sgk/kFFWY0qV8foQwS4MKBCS3qR6ixBJvElOobYAtivseIE120FaowJPN75GMu8j/LfMwNjh4HUpwg4LUAAAAASUVORK5CYII=);
+        background-position: right;
+        background-repeat: no-repeat;
+    }
+    #dialog label, #dialog input { display:block; }
+    #dialog label { margin-top: 0.5em; }
+    #dialog input, #dialog textarea { width: 95%; }
+    #tabs { margin-top: 1em; }
+    #tabs li .ui-icon-close { float: left; margin: 0.4em 0.2em 0 0; cursor: pointer; }
+    #add_tab { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id = "wrapper">
+        <div id = "left">
+         <!-- <button id="extend_collapse">+</button>-->
+                <div id="vdialog"  class = "ui-widget ui-corner-all">
+                <div class="ui-widget-header ui-corner-top ui-dialog-header ui-chatbox-titlebar">Live Variable View</div>
+                <div id="vtabs">
+                    <ul>
+                    </ul>
+                    <div id="vtab-0">
+                    </div>
+                </div>
+                <!--<div class = "scroll_section" id = "variable_list_section">
+                        SANG:collapsable tree reference : http://stackoverflow.com/questions/5636375/how-to-create-a-collapsing-tree-table-in-html-css-js 
+                    <table id="mytable" width = 100%>
+                        <tr data-depth="1" type = "table" class="expand" id ="_G" newindex = 0>
+                            <td><input type = checkbox keytype="none" id ="checkbox__G">Global Namespace</td>
+                        </tr>
+                    </table>
+                </div>
+            -->
+                <div class="toolbar ui-widget-header ui-corner-all">
+                    <button id="add_expression_button">add Exp.</button>
+                    <button id="table_clean_button">nullify</button>
+                    <button id="share_button">share</button>
+        <!--            <button id="table_cleanAll_button">clear all</button>-->
+                </div>
+            </div>
+                <BR>
+             <button  id="open_chatbox" align = right>Open urMus Chat</button>
+            <div id="chat_div">
+            </div>
+        </div>
+        <div id = "right">
+            <h2>urMus - Remote Lua  Editor 2.3.2
+            </h2>
+            <span id="status"></span><br>
+          <!--      <label class="labels" for="code">Run line:</label>
+            <input type="text" name="code" autocomplete="off" id="small_code" class="code">
+                <button id = "small_code_button">Go</button>
+            </form>-->
+            <div>
+                <span class="toolbar ui-widget-header ui-corner-all">
+                    <button  id="run_file">Run!</button>
+                    <button  id="reindent">Reindent</button>
+                    <!--        <button  id="extend_box">Extend Box</button>-->
+                    <button  id="open_log">Open Log</button>
+                    <button  id="save_file">Save file</button>
+                </span> 
+                <span id="upload_file">
+                    <label class="labels" for="file">Upload a file:</label>
+                    <input type="file" autocomplete="off" name="file" id="file_upload">
+                </span>
+            </div>
+
+            <div id="adddialog" title="Add Tab">
+                <form>
+                    <fieldset class="ui-helper-reset">
+                        <label for="tab_title">File Name (.lua)</label>
+                        <input type="text" name="tab_title" id="tab_title" value="" class="ui-widget-content ui-corner-all" />
+                    </fieldset>
+                </form>
+            </div>
+            <div id="chat_dialog" title="Join Chat">
+                <form>
+                    <fieldset class="ui-helper-reset">
+                        <label for="chat_name_title">Type your screen name.</label>
+                        <input type="text" name="chat_name" id="chat_name" value="" class="ui-widget-content ui-corner-all" />
+                    </fieldset>
+                </form>
+            </div>
+            <div id="rdialog" title="Rename">
+                <form>
+                    <fieldset class="ui-helper-reset">
+                        <label for="tab_title">File Name (.lua)</label>
+                        <input type="text" name="tab_title" id="tab_title" value="" class="ui-widget-content ui-corner-all" />
+                    </fieldset>
+                </form>
+            </div>
+            <div id="expdialog" title="Add Expression.">
+                <form>
+                    <fieldset class="ui-helper-reset">
+                        <label for="tab_title">Type an expression in lua</label>
+                        <input type="text" name="urmus_expression" id="urmus_expression" value="" class="ui-widget-content ui-corner-all" />
+                    </fieldset>
+                </form>
+            </div>
+
+
+            <div id="tabs">
+                <ul>
+                    <!--style= "display:none;" <span class='ui-icon-close'><img src=./images/close.gif valign = middle></span>-->
+                    <li ><a href='#filelist' id = 'filelist_tab'>File Tab</a> </li>
+                </ul>
+                <div id="filelist">
+                    <div class = "toolbar ui-widget-header ui-corner-all">
+                        <button id="add_tab">New File +</button>
+                        <button id="open_gallery">Open file gallery &rarr;</button>
+                        <button id="open_file">Open file &rarr;</button>
+                    </div>
+                    <div id="file_list" style="display: none">
+                        <ul id="files" class="listing"></ul>
+                    </div>
+                    <div id="gallery_list" style="display: none">
+                        <ul id="gallery_files" class="listing"></ul>
+                    </div>
+                </div>
+            </div>
+
+
+            
+            <div id="jquery_jplayer"></div>
+
+        </div> <!-- right -->
+
+        
+    </div>
+</body>
+</html>

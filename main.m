@@ -13,7 +13,8 @@ int main(int argc, char *argv[]) {
     
     NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
 //    int retVal = UIApplicationMain(argc, argv, nil, nil);
-    int retVal = UIApplicationMain(argc, argv, @"UIApplication", NSStringFromClass([urMusAppDelegate class]));
+//    int retVal = UIApplicationMain(argc, argv, @"UIApplication", NSStringFromClass([urMusAppDelegate class]));
+    int retVal = UIApplicationMain(argc, argv, @"UIApplication", @"urMusAppDelegate");
     [pool release];
     return retVal;
 }

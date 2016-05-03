@@ -2,6 +2,7 @@
 //--------------------------
 
 #include "config.h"
+#ifndef UISTRINGS
 #include <ft2build.h>
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
@@ -1349,3 +1350,4 @@ charPos* urFont::drawString(string c, float x, float y) {
     return returnpos;
 }
 
+#endif
